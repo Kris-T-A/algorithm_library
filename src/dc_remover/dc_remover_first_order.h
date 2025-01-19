@@ -2,8 +2,6 @@
 #include "algorithm_library/dc_remover.h"
 #include "framework/framework.h"
 
-using namespace Eigen;
-
 // DC remover implemented as a first-order IIR filter:
 // H(z) = (1 + a) / 2 * (1 - z^-1) / (1 - a * z^-1)
 // where:
@@ -54,7 +52,7 @@ class DCRemoverFirstOrder : public AlgorithmImplementation<DCRemoverConfiguratio
         return size;
     }
 
-    ArrayXf delay;
+    Eigen::ArrayXf delay;
     float coef0, coef1;
 
     friend BaseAlgorithm;
