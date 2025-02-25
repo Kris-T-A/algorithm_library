@@ -19,7 +19,7 @@ cpmaddpackage(
   NAME
   nlohmann_json
   VERSION
-  3.11.2
+  3.11.3
   GITHUB_REPOSITORY
   nlohmann/json # ArthurSonzogni/nlohmann_json_cmake_fetchcontent
   OPTIONS
