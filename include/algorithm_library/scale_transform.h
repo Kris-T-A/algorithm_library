@@ -42,5 +42,7 @@ class ScaleTransform : public Algorithm<ScaleTransformConfiguration>
     ScaleTransform(const Coefficients &c);
 
     Eigen::ArrayXf getCornerIndices() const; // returns the corner indices of the transformed scale. The length of the returned array is nOutputs + 1, the first element is 0
-                                             // and the last element is C.indexEnd
+    // and the last element is C.indexEnd
+
+    void inverse(I::Real2D input, O::Real2D output); // inverse transform of the scale. Note that this will not be exact due to the nature of the transformation
 };

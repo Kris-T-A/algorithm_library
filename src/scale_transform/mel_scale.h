@@ -31,9 +31,9 @@ class MelScale : public AlgorithmImplementation<ScaleTransformConfiguration, Mel
             yPower.block(0, channel, indexStart(0), 1).setConstant(xPower(0, channel) / nInputsSum(0));
             for (auto i = 0; i < C.nOutputs; i++)
             {
-                yPower.block(indexStart(i), channel, nInputsSum(i), 1).setConstant(xPower(i, channel) / nInputsSum(i));
+                yPower.block(indexStart(i), channel, nInputsSum(i), 1).setConstant(xPower(i, channel));
             }
-            yPower.block(indexEnd, channel, C.nInputs - indexEnd, 1).setConstant(xPower(C.nOutputs - 1, channel) / nInputsSum(C.nOutputs - 1));
+            yPower.block(indexEnd, channel, C.nInputs - indexEnd, 1).setConstant(xPower(C.nOutputs - 1, channel));
         }
     }
 
@@ -54,8 +54,8 @@ class MelScale : public AlgorithmImplementation<ScaleTransformConfiguration, Mel
         {
             for (auto i = 0; i < C.nOutputs; i++)
             {
-                // sum
-                output(i, channel) = input.block(indexStart(i), channel, nInputsSum(i), 1).sum();
+                // max
+                output(i, channel) = input.block(indexStart(i), channel, nInputsSum(i), 1).maxCoeff();
             }
         }
     }

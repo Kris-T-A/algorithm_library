@@ -1,3 +1,4 @@
+#include "scale_transform/log_scale.h"
 #include "scale_transform/mel_scale.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
@@ -7,30 +8,46 @@ using namespace Eigen;
 
 // --------------------------------------------- TEST CASES ---------------------------------------------
 
-TEST(ScaleTransform, Interface) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<MelScale>()); }
+TEST(ScaleTransform, InterfaceMel) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<MelScale>()); }
+
+TEST(ScaleTransform, InterfaceLog) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<LogScale>()); }
 
 // description: check that get corner frequencies work
 TEST(ScaleTransform, getters)
 {
     ScaleTransform algo;
     auto c = algo.getCoefficients();
+
+    c.transformType = c.MEL;
+    algo.setCoefficients(c);
     ArrayXf cornerFreqs = algo.getCornerIndices();
     fmt::print("Sample rate: {} Hz\n", c.indexEnd * 2);
-    fmt::print("Mel Corner frequencies (Hz): {}\n", cornerFreqs);
+    fmt::print("{} Mel Corner frequencies (Hz): {}\n", cornerFreqs.size(), cornerFreqs);
 
-    fmt::print("Setting new sample rate...\n");
+    c.transformType = c.LOGARITHMIC;
+    algo.setCoefficients(c);
+    cornerFreqs = algo.getCornerIndices();
+    fmt::print("{} Logarithmic Corner frequencies (Hz): {}\n", cornerFreqs.size(), (cornerFreqs * 1000).round() / 1000); // round to 3 decimals
+
+    fmt::print("\nSetting new sample rate...\n");
 
     c.indexEnd = 48000 / 2;
+    c.transformType = c.MEL;
     algo.setCoefficients(c);
     fmt::print("Sample rate: {} Hz\n", c.indexEnd * 2);
     cornerFreqs = algo.getCornerIndices();
-    fmt::print("Mel Corner frequencies (Hz): {}\n", cornerFreqs);
+    fmt::print("{} Mel Corner frequencies (Hz): {}\n", cornerFreqs.size(), cornerFreqs);
+
+    c.transformType = c.LOGARITHMIC;
+    algo.setCoefficients(c);
+    cornerFreqs = algo.getCornerIndices();
+    fmt::print("{} Logarithmic Corner frequencies (Hz): {}\n", cornerFreqs.size(), (cornerFreqs * 1000).round() / 1000); // round to 3 decimals
 }
 
-// process MelScale with an input of ones, and invert the output. Check the inverse is equal to input.
+// process ScaleTransform with an input of ones, and invert the output. Check the inverse is equal to input (This is only true due to the simple input and not in general)
 TEST(ScaleTransform, processInverse)
 {
-    MelScale algo;
+    ScaleTransform algo;
     auto c = algo.getCoefficients();
 
     Eigen::ArrayXf input(c.nInputs);
