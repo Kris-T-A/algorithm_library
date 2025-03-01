@@ -1,7 +1,7 @@
 #pragma once
 #include "interface/interface.h"
 
-// Transform a linear scale to a choice of non-linear scales by summing values.
+// Transform a linear scale to a choice of non-linear scale.
 //
 // author: Kristian Timm Andersen
 
