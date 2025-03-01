@@ -17,13 +17,13 @@
 #include "iir_filter_non_parametric/iir_filter_design_non_parametric.h"
 #include "iir_filter_time_varying/state_variable_filter.h"
 #include "interpolation/interpolation_cubic.h"
-#include "mel_scale/mel_scale_spectrogram.h"
 #include "min_phase_spectrum/min_phase_spectrum_cepstrum.h"
 #include "noise_estimation/noise_estimation_activity_detection.h"
 #include "noise_reduction/noise_reduction_apriori.h"
 #include "noise_reduction/noise_reduction_ml.h"
 #include "normal3d/normal3d_diff.h"
 #include "preprocessing_path/beamformer_path.h"
+#include "scale_transform/mel_scale.h"
 #include "single_channel_path/noise_reduction_path.h"
 #include "solver_toeplitz/solver_toeplitz_system.h"
 #include "spectral_compressor/spectral_compressor_adaptive.h"
@@ -83,7 +83,7 @@ DEFINE_BENCHMARK_ALGORITHM(StreamingMinMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMinLemire)
 DEFINE_BENCHMARK_ALGORITHM(DCRemoverFirstOrder)
-DEFINE_BENCHMARK_ALGORITHM(MelScaleSpectrogram)
+DEFINE_BENCHMARK_ALGORITHM(MelScale)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionFusedNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(GainCalculationApriori)
