@@ -13,6 +13,7 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
           logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         spectrogramOut = spectrogramSet.initDefaultOutput();
+        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB bost per octave
     }
 
     SpectrogramSet spectrogramSet;
@@ -31,6 +32,7 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
     inline void processAlgorithm(Input input, Output output)
     {
         spectrogramSet.process(input, spectrogramOut);
+        if (C.spectralTilt) { spectrogramOut.colwise() *= spectralTiltVector; }
         logScale.process(spectrogramOut, output);
         output = output.max(1e-20f).unaryExpr(std::ref(energy2dB)); // energy2dB = 10*log10(x)
     }
@@ -38,10 +40,12 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
     size_t getDynamicSizeVariables() const override
     {
         size_t size = spectrogramOut.getDynamicMemorySize();
+        size += spectralTiltVector.getDynamicMemorySize();
         return size;
     }
 
     Eigen::ArrayXXf spectrogramOut;
+    Eigen::ArrayXf spectralTiltVector;
 
     friend BaseAlgorithm;
 };

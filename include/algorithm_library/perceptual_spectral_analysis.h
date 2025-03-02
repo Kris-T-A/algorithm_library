@@ -15,7 +15,8 @@ struct PerceptualSpectralAnalysisConfiguration
         int bufferSize = 4096; // input buffer size
         int nBands = 100;      // number of perceptual frequency bands in output
         float sampleRate = 48000.0f;
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, sampleRate)
+        bool spectralTilt = true; // apply spectral tilt to output
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, sampleRate, spectralTilt)
     };
 
     struct Parameters
