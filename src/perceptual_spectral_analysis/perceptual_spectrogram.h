@@ -3,6 +3,7 @@
 #include "framework/framework.h"
 #include "scale_transform/log_scale.h"
 #include "spectrogram/spectrogram_set.h"
+#include "utilities/fastonebigheader.h"
 
 class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualSpectrogram>
 {
@@ -31,6 +32,7 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
     {
         spectrogramSet.process(input, spectrogramOut);
         logScale.process(spectrogramOut, output);
+        output = output.max(1e-20f).unaryExpr(std::ref(energy2dB)); // energy2dB = 10*log10(x)
     }
 
     size_t getDynamicSizeVariables() const override

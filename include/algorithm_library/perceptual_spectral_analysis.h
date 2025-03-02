@@ -34,7 +34,7 @@ struct PerceptualSpectralAnalysisConfiguration
 
     static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && input.allFinite(); }
 
-    static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && output.allFinite() && (output >= 0).all() && (output.cols() == 8); }
+    static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && output.allFinite() && (output.cols() == 8); }
 };
 
 class PerceptualSpectralAnalysis : public Algorithm<PerceptualSpectralAnalysisConfiguration>
