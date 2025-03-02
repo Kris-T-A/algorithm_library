@@ -277,6 +277,7 @@ class AlgorithmImplementation
 
     auto initInput() const { return Configuration::initInput(C); }
     auto initOutput(Input input) const { return Configuration::initOutput(input, C); }
+    auto initDefaultOutput() const { return Configuration::initOutput(initInput(), C); }
     auto validInput(Input input) const { return Configuration::validInput(input, C); }
     auto validOutput(Output output) const { return Configuration::validOutput(output, C); }
 
