@@ -18,8 +18,16 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
     LogScale logScale;
     DEFINE_MEMBER_ALGORITHMS(spectrogramSet, logScale)
 
+    Eigen::ArrayXf getCornerFrequencies() const { return logScale.getCornerIndices(); }
+
+    Eigen::ArrayXf getCenterFrequencies() const
+    {
+        Eigen::ArrayXf cornerFrequencies = getCornerFrequencies();
+        return (cornerFrequencies.head(C.nBands) + cornerFrequencies.tail(C.nBands)) / 2;
+    }
+
   private:
-    void processAlgorithm(Input input, Output output)
+    inline void processAlgorithm(Input input, Output output)
     {
         spectrogramSet.process(input, spectrogramOut);
         logScale.process(spectrogramOut, output);
