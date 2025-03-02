@@ -13,7 +13,7 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
           logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         spectrogramOut = spectrogramSet.initDefaultOutput();
-        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB bost per octave
+        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
     }
 
     SpectrogramSet spectrogramSet;
