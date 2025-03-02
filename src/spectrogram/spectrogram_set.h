@@ -1,3 +1,4 @@
+#pragma once
 #include "algorithm_library/spectrogram.h"
 #include "filterbank_set/filterbank_set_wola.h"
 #include "framework/framework.h"
