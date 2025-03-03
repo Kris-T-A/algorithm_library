@@ -131,7 +131,7 @@ struct ConfigurationBuffer : public Tconfiguration
 
     static Eigen::ArrayXXf initOutputAnySize(Input input, const typename Tconfiguration::Coefficients &c, BufferMode bufferMode)
     {
-        return Eigen::ArrayXXf::Zero(getOutputAnySizeBufferSize(input.rows(), c, bufferMode), Tconfiguration::getNChannelsOut(c));
+        return Eigen::ArrayXXf::Zero(getOutputAnySizeBufferSize(static_cast<int>(input.rows()), c, bufferMode), Tconfiguration::getNChannelsOut(c));
     } // time samples
 
     static bool validInputAnySize(Input input, const typename Tconfiguration::Coefficients &c)
