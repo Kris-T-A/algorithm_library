@@ -18,7 +18,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         Eigen::ArrayXf cornerBinsFloat = ((c.nInputs - 1) / c.indexEnd * freqs);
 
         Eigen::ArrayXf cornerBinsFloatDiff = cornerBinsFloat.tail(c.nOutputs) - cornerBinsFloat.head(c.nOutputs);
-        nSmallBins = (cornerBinsFloatDiff <= 1.f).cast<float>().sum();                            // number of bins that has width smaller or equal to 1
+        nSmallBins = (cornerBinsFloatDiff <= 1.f).cast<int>().sum();                            // number of bins that has width smaller or equal to 1
         binsWeight = cornerBinsFloat.head(nSmallBins) - cornerBinsFloat.head(nSmallBins).floor(); // weight for the bins with width smaller or equal to 1
 
         Eigen::ArrayXi cornerBins =

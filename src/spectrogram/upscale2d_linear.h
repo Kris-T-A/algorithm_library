@@ -31,8 +31,8 @@ struct Upscale2DConfiguration
 
     static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c)
     {
-        int nRows = c.factorVertical * (input.rows() - 1) + 1;
-        int nCols = c.factorHorizontal * (input.cols() - 1) + 1;
+        int nRows = c.factorVertical * (static_cast<int>(input.rows()) - 1) + 1;
+        int nCols = c.factorHorizontal * (static_cast<int>(input.cols()) - 1) + 1;
         nCols -= c.leftBoundaryExcluded ? 1 : 0;
         return Eigen::ArrayXXf::Zero(nRows, nCols);
     }
@@ -60,9 +60,9 @@ class Upscale2DLinear : public AlgorithmImplementation<Upscale2DConfiguration, U
   private:
     void processAlgorithm(Input input, Output output)
     {
-        const int cols = input.cols();
+        const int cols = static_cast<int>(input.cols());
         const int colsm1 = cols - 1;
-        const int rows = input.rows();
+        const int rows = static_cast<int>(input.rows());
         const int rowsm1 = rows - 1;
 
         int startCol = 0; // start from column 0
