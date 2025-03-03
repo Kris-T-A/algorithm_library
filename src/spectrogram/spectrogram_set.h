@@ -29,7 +29,7 @@ class SpectrogramSet : public AlgorithmImplementation<SpectrogramConfiguration, 
         spectrogramRaw.resize(filterbankOut.size());
         for (auto i = 0; i < static_cast<int>(filterbankOut.size()); i++)
         {
-            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(filterbankOut[i].rows(), (1 << (i + 1))); // +1 to keep the last previous frame
+            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(filterbankOut[i].rows(), positivePow2(i + 1)); // +1 to keep the last previous frame
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
 
