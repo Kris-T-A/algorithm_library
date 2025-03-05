@@ -21,7 +21,7 @@ TEST(Upscale2DLinear, printOutput)
     {
         for (auto j = 0; j < 3; j++)
         {
-            input(i, j) = i + j;
+            input(i, j) = static_cast<float>(i + j);
         }
     }
     auto output = upscale.initOutput(input);

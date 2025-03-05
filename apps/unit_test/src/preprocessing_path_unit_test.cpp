@@ -60,14 +60,14 @@ TEST(PreprocessingPath, AnySize)
     auto output = prePath.initOutputAnySize(input);
     prePath.processAnySize(input, output);
     EXPECT_TRUE(prePath.validInputAnySize(input));
-    EXPECT_TRUE(prePath.validOutputAnySize(output, input.rows()));
+    EXPECT_TRUE(prePath.validOutputAnySize(output, static_cast<int>(input.rows())));
     fmt::print("Synchronous processing with small bufferSize succesful.\n");
 
     prePath.setBufferMode(BufferMode::ASYNCHRONOUS_BUFFER);
     output = prePath.initOutputAnySize(input);
     prePath.processAnySize(input, output);
     EXPECT_TRUE(prePath.validInputAnySize(input));
-    EXPECT_TRUE(prePath.validOutputAnySize(output, input.rows()));
+    EXPECT_TRUE(prePath.validOutputAnySize(output, static_cast<int>(input.rows())));
     fmt::print("Asynchronous processing with small bufferSize succesful.\n");
 
     // set bufferSizeInput to be larger than bufferSize
@@ -78,13 +78,13 @@ TEST(PreprocessingPath, AnySize)
     output = prePath.initOutputAnySize(input);
     prePath.processAnySize(input, output);
     EXPECT_TRUE(prePath.validInputAnySize(input));
-    EXPECT_TRUE(prePath.validOutputAnySize(output, input.rows()));
+    EXPECT_TRUE(prePath.validOutputAnySize(output, static_cast<int>(input.rows())));
     fmt::print("Synchronous processing with large bufferSize succesful.\n");
 
     prePath.setBufferMode(BufferMode::ASYNCHRONOUS_BUFFER);
     output = prePath.initOutputAnySize(input);
     prePath.processAnySize(input, output);
     EXPECT_TRUE(prePath.validInputAnySize(input));
-    EXPECT_TRUE(prePath.validOutputAnySize(output, input.rows()));
+    EXPECT_TRUE(prePath.validOutputAnySize(output, static_cast<int>(input.rows())));
     fmt::print("Asynchronous processing with large bufferSize succesful.\n");
 }
