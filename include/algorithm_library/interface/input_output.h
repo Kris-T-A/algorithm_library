@@ -26,6 +26,7 @@ using Real2D = In<Eigen::ArrayXXf>;
 using Complex2D = In<Eigen::ArrayXXcf>;
 using Bool2D = In<Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>>;
 using Boolean = const bool &;
+using Int = const int &;
 using Float = const float &;
 using Void = void *;
 
