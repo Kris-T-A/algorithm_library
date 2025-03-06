@@ -1,7 +1,7 @@
 #pragma once
 #include "algorithm_library/audio_attenuate.h"
+#include "filterbank_set/filterbank_set_wola.h"
 #include "framework/framework.h"
-#include "spectrogram/spectrogram_set.h"
 
 // Adaptive audio attenuation algorithm. The gainSpectrogram is a matrix of size (hopSize * 2 + 1) x nFrames.
 // The gainSpectrogram is used to attenuate the input audio signal. The attenuation is done by element-wise multiplication of the input audio signal and the gainSpectrogram.
@@ -9,14 +9,29 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
 {
   public:
     AudioAttenuateAdaptive(const Coefficients &c = Coefficients())
-        : BaseAlgorithm(c), spectrogram({.bufferSize = c.hopSize, .nBands = 2 * c.hopSize + 1, .algorithmType = SpectrogramSet::Coefficients::ADAPTIVE_HANN_8})
-    {}
+        : BaseAlgorithm(c),
+          filterbankAnalysis(
+              {.bufferSize = c.hopSize, .nBands = 2 * c.hopSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN})
+    {
+        spectrogramMultipleResolution = filterbankAnalysis.initDefaultOutput();
+    }
 
-    SpectrogramSet spectrogram;
-    DEFINE_MEMBER_ALGORITHMS(spectrogram)
+    FilterbankSetAnalysisWOLA filterbankAnalysis;
+    DEFINE_MEMBER_ALGORITHMS(filterbankAnalysis)
 
   private:
-    void processAlgorithm(Input input, Output output) {}
+    void processAlgorithm(Input input, Output output) { filterbankAnalysis.process(input.audio, spectrogramMultipleResolution); }
 
+    size_t getDynamicSizeVariables() const final
+    {
+        size_t size = 0;
+        for (auto &spectrogram : spectrogramMultipleResolution)
+        {
+            size += spectrogram.getDynamicMemorySize();
+        }
+        return size;
+    }
+
+    std::vector<Eigen::ArrayXXcf> spectrogramMultipleResolution;
     friend BaseAlgorithm;
 };
