@@ -1,4 +1,5 @@
 #include "activity_detection/activity_detection_noise_estimation.h"
+#include "audio_attenuate/decimate_gain.h"
 #include "bandsplit_downsample/bandsplit_downsample_chebyshev.h"
 #include "beamformer/beamformer_mvdr.h"
 #include "benchmark/benchmark.h"
@@ -33,6 +34,7 @@
 #include "spectrogram/spectrogram_nonlinear.h"
 #include "spline/spline_cubic.h"
 
+
 // Macro for defining timing test using google benchmark framework
 #define DEFINE_BENCHMARK_ALGORITHM(algorithm)                                                                                                                                 \
     static void algorithm##_process(benchmark::State &state)                                                                                                                  \
@@ -51,6 +53,7 @@
 
 // insert algorithms to be benchmarked. Be very careful about interpreting these results since the time depends on where in the list an algorithm is placed!
 DEFINE_BENCHMARK_ALGORITHM(CircularBuffer)
+DEFINE_BENCHMARK_ALGORITHM(DecimateGain)
 DEFINE_BENCHMARK_ALGORITHM(DesignIIRMinPhaseTF2SOS)
 DEFINE_BENCHMARK_ALGORITHM(DesignIIRSpline)
 DEFINE_BENCHMARK_ALGORITHM(StateVariableFilter)

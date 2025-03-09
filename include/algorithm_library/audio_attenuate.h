@@ -47,7 +47,7 @@ struct AudioAttenuateConfiguration
                (input.gainSpectrogram.cols() <= 8) && (input.gainSpectrogram >= 0.f).all() && (input.gainSpectrogram <= 1.f).all();
     }
 
-    static bool validOutput(Output output, const Coefficients &c) { return (output.size() > c.bufferSize) && output.allFinite(); }
+    static bool validOutput(Output output, const Coefficients &c) { return (output.size() == c.bufferSize) && output.allFinite(); }
 };
 
 class AudioAttenuate : public Algorithm<AudioAttenuateConfiguration>
