@@ -11,7 +11,7 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
     AudioAttenuateAdaptive(const Coefficients &c = Coefficients())
         : BaseAlgorithm(c),
           filterbankAnalysis(
-              {.bufferSize = c.hopSize, .nBands = 2 * c.hopSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN})
+              {.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN})
     {
         spectrogramMultipleResolution = filterbankAnalysis.initDefaultOutput();
     }
@@ -33,5 +33,6 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
     }
 
     std::vector<Eigen::ArrayXXcf> spectrogramMultipleResolution;
+
     friend BaseAlgorithm;
 };
