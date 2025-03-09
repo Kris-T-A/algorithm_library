@@ -33,7 +33,7 @@ class BandsplitDownsampleChebyshev : public AlgorithmImplementation<BandsplitDow
     {
         // lowpass and downsample by factor of 3
         filterLowpass.process(input, buffer);
-        output.downsampled = buffer(Eigen::seq(0, C.nSamples - 1, 3), Eigen::all); // downsample by factor of 3
+        output.downsampled = buffer(Eigen::seq(0, C.nSamples - 1, 3), Eigen::indexing::all); // downsample by factor of 3
 
         // highpass and delay
         filterHighpass.process(input, buffer);
@@ -74,7 +74,7 @@ class CombineBandsplitDownsampleChebyshev : public AlgorithmImplementation<Combi
     void processAlgorithm(Input input, Output output)
     {
         // upsample by a factor of 3 and lowpass
-        buffer(Eigen::seq(0, 3 * C.nSamples - 1, 3), Eigen::all) = 3.f * input.downsampled;
+        buffer(Eigen::seq(0, 3 * C.nSamples - 1, 3), Eigen::indexing::all) = 3.f * input.downsampled;
         filterLowpass.process(buffer, output);
         // sum with highpass
         output += input.highpass;
