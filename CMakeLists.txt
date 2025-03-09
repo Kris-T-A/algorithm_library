@@ -28,7 +28,7 @@ cpmaddpackage(
 )
 
 # add Eigen library (CMakeLists.txt in this project is not suitable for including as subdirectory, and it's a header-only project so only download it)
-cpmaddpackage(NAME Eigen URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip DOWNLOAD_ONLY YES)
+cpmaddpackage(NAME Eigen GITLAB_REPOSITORY libeigen/eigen GIT_TAG 3.4.0 DOWNLOAD_ONLY YES)
 add_library(Eigen INTERFACE IMPORTED)
 target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
 
