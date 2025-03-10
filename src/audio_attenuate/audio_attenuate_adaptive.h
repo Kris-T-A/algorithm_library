@@ -1,5 +1,6 @@
 #pragma once
 #include "algorithm_library/audio_attenuate.h"
+#include "decimate_gain.h"
 #include "filterbank_set/filterbank_set_wola.h"
 #include "framework/framework.h"
 
@@ -11,16 +12,23 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
     AudioAttenuateAdaptive(const Coefficients &c = Coefficients())
         : BaseAlgorithm(c),
           filterbankAnalysis(
-              {.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN})
+              {.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN}),
+          decimateGain({.nBands = 2 * c.bufferSize + 1})
     {
         spectrogramMultipleResolution = filterbankAnalysis.initDefaultOutput();
+        gainMultipleResolution = decimateGain.initDefaultOutput();
     }
 
     FilterbankSetAnalysisWOLA filterbankAnalysis;
-    DEFINE_MEMBER_ALGORITHMS(filterbankAnalysis)
+    DecimateGain decimateGain;
+    DEFINE_MEMBER_ALGORITHMS(filterbankAnalysis, decimateGain)
 
   private:
-    void processAlgorithm(Input input, Output output) { filterbankAnalysis.process(input.audio, spectrogramMultipleResolution); }
+    void processAlgorithm(Input input, Output output)
+    {
+        filterbankAnalysis.process(input.audio, spectrogramMultipleResolution);
+        decimateGain.process(input.gainSpectrogram, gainMultipleResolution);
+    }
 
     size_t getDynamicSizeVariables() const final
     {
@@ -29,10 +37,15 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         {
             size += spectrogram.getDynamicMemorySize();
         }
+        for (auto &gain : gainMultipleResolution)
+        {
+            size += gain.getDynamicMemorySize();
+        }
         return size;
     }
 
     std::vector<Eigen::ArrayXXcf> spectrogramMultipleResolution;
+    std::vector<Eigen::ArrayXXf> gainMultipleResolution;
 
     friend BaseAlgorithm;
 };
