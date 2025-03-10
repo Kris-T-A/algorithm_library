@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+# Include the CheckCXXCompilerFlag module
+include(CheckCXXCompilerFlag)
+
 # set project name and version
 project(
   AlgorithmLibrary
@@ -28,7 +31,7 @@ cpmaddpackage(
 )
 
 # add Eigen library (CMakeLists.txt in this project is not suitable for including as subdirectory, and it's a header-only project so only download it)
-cpmaddpackage(NAME Eigen GITLAB_REPOSITORY libeigen/eigen GIT_TAG 3.4.0 DOWNLOAD_ONLY YES)
+cpmaddpackage(NAME Eigen GITLAB_REPOSITORY libeigen/eigen GIT_TAG master DOWNLOAD_ONLY YES)
 add_library(Eigen INTERFACE IMPORTED)
 target_include_directories(Eigen INTERFACE ${Eigen_SOURCE_DIR})
 
@@ -106,6 +109,10 @@ if(MSVC)
   target_compile_options(${PROJECT_NAME} PUBLIC /fp:fast /W4 -wd4127 -wd4100 -wd4459 /std:c++20) # we enforce C++20 for MSVC since it is needed for designated initializers lists. GCC and Clang already implements this in C++14 so there it is not needed.
 
 else() # on GCC/CLANG increase warning level
+  check_cxx_compiler_flag(-Wno-psabi COMPILER_SUPPORT_Wno-psabi)
+  if(COMPILER_SUPPORT_Wno-psabi)
+    target_compile_options(${PROJECT_NAME} PUBLIC -Wno-psabi) # ignore warning about ABI changes in std::complex since GCC 4.4. You can ignore it if you aren't mixing binaries before and after GCC 4.4.
+  endif()
   target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Werror -Wextra -Wno-unused-parameter) # "no-unused-parameter": suppress unused parameter warning
   target_compile_options(${PROJECT_NAME} PRIVATE -ffast-math)
 endif()
