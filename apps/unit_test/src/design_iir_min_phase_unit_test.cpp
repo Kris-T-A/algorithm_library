@@ -26,7 +26,7 @@ TEST(DesignIIRMinPhase, CheckCalculation)
     float gain;
     filterDesigner.process(input, {sos, gain});
     ArrayXXf sosRef(6, filterDesigner.getNSos());
-    sosRef << 1.f, 1.f, 1.f, 1.04831f, -1.34835f, 0.345899f, 0.842527f, 0.751896f, 0.f, 1.f, 1.f, 1.f, -1.50516f, 0.759416f, 0.850303f, 0.884276f, 0.870153f, 0.f;
+    sosRef << 1.f, 1.f, 1.f, 1.04831f, -1.34835f, 0.345899f, 0.842527f, 0.751896f, 0.f, 1.f, 1.f, 1.f, 0.759416f, -1.50516f, 0.850303f, 0.870153f, 0.884276f, 0.f;
     float errorSOS = (sos - sosRef).abs2().sum() / sosRef.abs2().sum();
     fmt::print("SOS relative error: {}\n", errorSOS);
     float errorGain = std::fabs(gain - 1.89722f);
