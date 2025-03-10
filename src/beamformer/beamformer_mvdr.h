@@ -105,9 +105,9 @@ class BeamformerMVDR : public AlgorithmImplementation<BeamformerConfiguration, B
         currentBand = 0;
         for (auto i = 0u; i < Rx.size(); i++)
         {
-            Rx[i].setZero();
+            Rx[i] = 1e-16f * Eigen::MatrixXcf::Identity(C.nChannels, C.nChannels);
             Rx[i](0, 0) = 1e-5f;
-            Rn[i].setZero();
+            Rn[i] = 1e-17f * Eigen::MatrixXcf::Identity(C.nChannels, C.nChannels);
         }
         eigenVectors.setZero();
         filter.setZero();
