@@ -13,21 +13,33 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         : BaseAlgorithm(c),
           filterbankAnalysis(
               {.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN}),
-          decimateGain({.nBands = 2 * c.bufferSize + 1})
+          decimateGain({.nBands = 2 * c.bufferSize + 1}),
+          filterbankSynthesis(
+              {.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = 4, .filterbankType = FilterbankSetSynthesisConfiguration::Coefficients::HANN})
     {
         spectrogramMultipleResolution = filterbankAnalysis.initDefaultOutput();
         gainMultipleResolution = decimateGain.initDefaultOutput();
+        gainOldMultipleResolution = decimateGain.initDefaultOutput();
     }
 
     FilterbankSetAnalysisWOLA filterbankAnalysis;
     DecimateGain decimateGain;
-    DEFINE_MEMBER_ALGORITHMS(filterbankAnalysis, decimateGain)
+    FilterbankSetSynthesisWOLA filterbankSynthesis;
+    DEFINE_MEMBER_ALGORITHMS(filterbankAnalysis, decimateGain, filterbankSynthesis)
 
   private:
     void processAlgorithm(Input input, Output output)
     {
         filterbankAnalysis.process(input.audio, spectrogramMultipleResolution);
         decimateGain.process(input.gainSpectrogram, gainMultipleResolution);
+
+        for (auto iFilterbank = 0; iFilterbank < 4; iFilterbank++)
+        {
+            spectrogramMultipleResolution[iFilterbank] *= gainOldMultipleResolution[iFilterbank];
+        }
+        gainOldMultipleResolution = gainMultipleResolution;
+
+        filterbankSynthesis.process(spectrogramMultipleResolution, output);
     }
 
     size_t getDynamicSizeVariables() const final
@@ -41,11 +53,16 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         {
             size += gain.getDynamicMemorySize();
         }
+        for (auto &gainOld : gainOldMultipleResolution)
+        {
+            size += gainOld.getDynamicMemorySize();
+        }
         return size;
     }
 
     std::vector<Eigen::ArrayXXcf> spectrogramMultipleResolution;
     std::vector<Eigen::ArrayXXf> gainMultipleResolution;
+    std::vector<Eigen::ArrayXXf> gainOldMultipleResolution;
 
     friend BaseAlgorithm;
 };
