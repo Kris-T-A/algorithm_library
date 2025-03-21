@@ -32,10 +32,12 @@ struct AudioAttenuateConfiguration
         DEFINE_NO_TUNABLE_PARAMETERS
     };
 
+    static constexpr int nGains = 8; // number of gains in the gain spectrogram (must be power of 2). The gain spectrogram is a matrix of size nBands x nGains
+
     static std::tuple<Eigen::ArrayXf, Eigen::ArrayXXf> initInput(const Coefficients &c)
     {
-        Eigen::ArrayXf inputAudio = Eigen::ArrayXf::Random(c.bufferSize);                         // audio samples
-        Eigen::ArrayXXf gainSpectrogram = Eigen::ArrayXXf::Random(c.bufferSize * 2 + 1, 8).abs(); // gain between 0 and 1
+        Eigen::ArrayXf inputAudio = Eigen::ArrayXf::Random(c.bufferSize);                              // audio samples
+        Eigen::ArrayXXf gainSpectrogram = Eigen::ArrayXXf::Random(c.bufferSize * 2 + 1, nGains).abs(); // gain between 0 and 1
         return std::make_tuple(inputAudio, gainSpectrogram);
     }
 
@@ -44,7 +46,7 @@ struct AudioAttenuateConfiguration
     static bool validInput(Input input, const Coefficients &c)
     {
         return input.audio.allFinite() && (input.audio.size() == c.bufferSize) && (input.gainSpectrogram.rows() == (c.bufferSize * 2 + 1)) &&
-               (input.gainSpectrogram.cols() <= 8) && (input.gainSpectrogram >= 0.f).all() && (input.gainSpectrogram <= 1.f).all();
+               (input.gainSpectrogram.cols() == nGains) && isPositivePowerOfTwo(nGains) && (input.gainSpectrogram >= 0.f).all() && (input.gainSpectrogram <= 1.f).all();
     }
 
     static bool validOutput(Output output, const Coefficients &c) { return (output.size() == c.bufferSize) && output.allFinite(); }
