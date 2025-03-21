@@ -1,6 +1,6 @@
 #pragma once
 #include "algorithm_library/audio_attenuate.h"
-#include "audio_combine.h"
+#include "audio_attenuate/audio_combine.h"
 #include "decimate_gain.h"
 #include "delay/circular_buffer.h"
 #include "filterbank_set/filterbank_set_wola.h"
@@ -35,6 +35,7 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         spectrogramMultipleResolution = filterbankAnalysis.initDefaultOutput();
         gainMultipleResolution = decimateGain.initDefaultOutput();
         gainOldMultipleResolution = decimateGain.initDefaultOutput();
+        outputSet = filterbankSynthesis.initDefaultOutput();
         delayedOutput = Eigen::ArrayXXf::Zero(bufferSizeSmall, nFilterbanks);
     }
 
@@ -58,17 +59,17 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         }
         gainOldMultipleResolution = gainMultipleResolution;
 
-        filterbankSynthesis.process(spectrogramMultipleResolution, output);
+        filterbankSynthesis.process(spectrogramMultipleResolution, outputSet);
 
         // for each small buffer size, delay and choose the signal with maximum power
         for (auto i = 0; i < Configuration::nGains; i++)
         {
-            delayedOutput.col(0) = output.col(0).segment(i * bufferSizeSmall, bufferSizeSmall);
+            delayedOutput.col(0) = outputSet.col(0).segment(i * bufferSizeSmall, bufferSizeSmall);
             for (auto iDelay = 1; iDelay < nFilterbanks; iDelay++)
             {
-                delay[iDelay - 1].process(output.col(iDelay).segment(i * bufferSizeSmall, bufferSizeSmall), delayedOutput.col(iDelay));
+                delay[iDelay - 1].process(outputSet.col(iDelay).segment(i * bufferSizeSmall, bufferSizeSmall), delayedOutput.col(iDelay));
             }
-            audioCombineMax.process(delayedOutput, output.col(i)).segment(i * bufferSizeSmall, bufferSizeSmall);
+            audioCombineMax.process(delayedOutput, output.segment(i * bufferSizeSmall, bufferSizeSmall));
         }
     }
 
@@ -87,12 +88,15 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         {
             size += gainOld.getDynamicMemorySize();
         }
+        size += outputSet.getDynamicMemorySize();
+        size += delayedOutput.getDynamicMemorySize();
         return size;
     }
 
     std::vector<Eigen::ArrayXXcf> spectrogramMultipleResolution;
     std::vector<Eigen::ArrayXXf> gainMultipleResolution;
     std::vector<Eigen::ArrayXXf> gainOldMultipleResolution;
+    Eigen::ArrayXXf outputSet;
     Eigen::ArrayXXf delayedOutput;
 
     constexpr static int nFilterbanks = numberOfBits(Configuration::nGains); // Number of filterbanks: log2(8) = 4
