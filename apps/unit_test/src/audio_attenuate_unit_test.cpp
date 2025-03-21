@@ -12,6 +12,10 @@ TEST(AudioAttenuate, Interface) { EXPECT_TRUE(InterfaceTests::algorithmInterface
 
 TEST(DecimateGain, Interface) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<DecimateGain>()); }
 
+TEST(AudioCombine, InterfaceMaxn) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<AudioCombineMax>()); }
+
+TEST(AudioCombine, InterfaceMin) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<AudioCombineMin>()); }
+
 // print small example output
 TEST(DecimateGain, PrintOutput)
 {
