@@ -1,6 +1,6 @@
 #pragma once
 #include "algorithm_library/interface/interface.h"
-#include "filterbank_wola.h"
+#include "filterbank/filterbank_wola.h"
 #include "framework/framework.h"
 
 // Combine a number of audio channels to one channel by taking the min/max power of each frequency band. The input audio signal is a matrix of size bufferSize x
