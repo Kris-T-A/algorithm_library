@@ -6,7 +6,8 @@
 #include "algorithm_library/interface/input_output.h"       // Input/Output structs.
 #include "algorithm_library/interface/macros_json.h"        // macros for coefficients and parameters
 #include "algorithm_library/interface/public_algorithm.h"   // Base Algorithm class
-#include <Eigen/Dense>                                      // Eigen Library.
+#include "helper_functions.h"
+#include <Eigen/Dense> // Eigen Library.
 #include <Eigen/IterativeLinearSolvers>
 
 // This is the main interface file that includes the necessary files for the public interface
