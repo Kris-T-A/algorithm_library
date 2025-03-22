@@ -1,0 +1,3 @@
+#include "audio_attenuate/audio_attenuate_adaptive.h"
+
+DEFINE_ALGORITHM_CONSTRUCTOR(AudioAttenuate, AudioAttenuateAdaptive, AudioAttenuateConfiguration)
