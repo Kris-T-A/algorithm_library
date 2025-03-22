@@ -35,6 +35,10 @@ struct Implementation : public Algorithm<Tconfiguration>::BaseImplementation
     {
         return algo.initOutput(input);
     }
+    decltype(Tconfiguration::initOutput(std::declval<typename Tconfiguration::Input>(), std::declval<typename Tconfiguration::Coefficients>())) initDefaultOutput() const final
+    {
+        return algo.initDefaultOutput();
+    }
 };
 
 template <typename Talgo, typename Tconfiguration>
@@ -88,6 +92,10 @@ struct BufferImplementation : public AlgorithmBuffer<Tconfiguration>::BufferBase
         typename Tconfiguration::Input input) const final
     {
         return algo.initOutput(input);
+    }
+    decltype(Tconfiguration::initOutput(std::declval<typename Tconfiguration::Input>(), std::declval<typename Tconfiguration::Coefficients>())) initDefaultOutput() const final
+    {
+        return algo.initDefaultOutput();
     }
 
     BufferMode getBufferMode() const override { return BufferMode::SYNCHRONOUS_BUFFER; }
@@ -277,7 +285,7 @@ class AlgorithmImplementation
 
     auto initInput() const { return Configuration::initInput(C); }
     auto initOutput(Input input) const { return Configuration::initOutput(input, C); }
-    auto initDefaultOutput() const { return Configuration::initOutput(initInput(), C); }
+    auto initDefaultOutput() const { return initOutput(initInput()); }
     auto validInput(Input input) const { return Configuration::validInput(input, C); }
     auto validOutput(Output output) const { return Configuration::validOutput(output, C); }
 

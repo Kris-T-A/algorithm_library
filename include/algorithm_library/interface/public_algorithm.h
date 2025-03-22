@@ -60,6 +60,7 @@ class Algorithm
     auto validOutput(Output output) const { return pimpl->validOutput(output); }
     auto initInput() const { return pimpl->initInput(); }
     auto initOutput(Input input) const { return pimpl->initOutput(input); }
+    auto initDefaultOutput() const { return pimpl->initDefaultOutput(); }
 
     bool isConfigurationValid() const { return pimpl->isConfigurationValid(); } // if this returns false, then behaviour of algorithm is undefined
 
@@ -84,6 +85,7 @@ class Algorithm
         virtual bool validOutput(typename Configuration::Output output) const = 0;
         virtual decltype(Configuration::initInput(std::declval<Coefficients>())) initInput() const = 0;
         virtual decltype(Configuration::initOutput(std::declval<Input>(), std::declval<Coefficients>())) initOutput(typename Configuration::Input input) const = 0;
+        virtual decltype(Configuration::initOutput(std::declval<Input>(), std::declval<Coefficients>())) initDefaultOutput() const = 0;
     };
 
   protected:
