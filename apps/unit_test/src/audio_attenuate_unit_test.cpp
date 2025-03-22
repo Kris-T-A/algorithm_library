@@ -32,3 +32,33 @@ TEST(DecimateGain, PrintOutput)
     std::cout << "Output 2: \n" << output[2] << "\n";
     std::cout << "Output 3: \n" << output[3] << "\n";
 }
+
+// pass an impulse through the algorithm to check if it comes out unchanged
+// This test is currently not passing!
+TEST(AudioAttenuate, ImpulseTest)
+{
+    // initialize algorithm
+    AudioAttenuateAdaptive::Coefficients c;
+    c.bufferSize = 1024;
+    c.sampleRate = 48000;
+    AudioAttenuate algo(c);
+
+    int nFrames = 10; // number of input buffer sizes to send through algorithm
+    Eigen::ArrayXf input(nFrames * c.bufferSize), output(nFrames * c.bufferSize);
+    input.setZero();
+    input(0) = 1; // impulse at the beginning of the input signal
+
+    Eigen::ArrayXf inputFrame, outputFrame;
+    Eigen::ArrayXXf gainSpectrogram;
+    std::tie(inputFrame, gainSpectrogram) = algo.initInput();
+    gainSpectrogram.setOnes();
+    outputFrame = algo.initDefaultOutput();
+
+    for (int i = 0; i < nFrames; i++)
+    {
+        inputFrame = input.segment(i * c.bufferSize, c.bufferSize);
+        algo.process({inputFrame, gainSpectrogram}, outputFrame);
+        output.segment(i * c.bufferSize, c.bufferSize) = outputFrame;
+    }
+    fmt::print("Output: {}\n", output);
+}
