@@ -20,6 +20,7 @@ TEST(DCRemover, changecutoff)
 
     int n = 1000;
     Eigen::ArrayXf input(n), output(n), output2(n);
+    srand(0); // initialize to get consistent results
     input.setRandom();
 
     dcRemover.process(input, output);
