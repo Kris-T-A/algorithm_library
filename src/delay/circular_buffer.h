@@ -61,11 +61,11 @@ class CircularBuffer : public AlgorithmImplementation<DelayConfiguration, Circul
         {
             const int bRows = std::min(static_cast<int>(input.rows()), C.delayLength - index);
             const int tRows = std::max(0, static_cast<int>(input.rows()) - C.delayLength + index);
-            output.topRows(bRows) = buffer.bottomRows(bRows);
+            output.topRows(bRows) = buffer.middleRows(index, bRows);
             output.bottomRows(tRows) = buffer.topRows(tRows);
-            buffer.bottomRows(bRows) = input.topRows(bRows);
+            buffer.middleRows(index, bRows) = input.topRows(bRows);
             buffer.topRows(tRows) = input.bottomRows(tRows);
-            index = tRows;
+            index = tRows > 0 ? tRows : index + bRows;
         }
         else
         {
