@@ -37,6 +37,8 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         gainOldMultipleResolution = decimateGain.initDefaultOutput();
         outputSet = filterbankSynthesis.initDefaultOutput();
         delayedOutput = Eigen::ArrayXXf::Zero(bufferSizeSmall, nFilterbanks);
+
+        resetVariables();
     }
 
     int bufferSizeSmall; // smallest buffer size. Initialize first so it's available in the constructor
@@ -70,6 +72,14 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
                 delay[iDelay - 1].process(outputSet.col(iDelay).segment(i * bufferSizeSmall, bufferSizeSmall), delayedOutput.col(iDelay));
             }
             audioCombineMax.process(delayedOutput, output.segment(i * bufferSizeSmall, bufferSizeSmall));
+        }
+    }
+
+    void resetVariables() final
+    {
+        for (auto &gainOld : gainOldMultipleResolution)
+        {
+            gainOld.setOnes();
         }
     }
 
