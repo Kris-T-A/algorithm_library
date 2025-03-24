@@ -55,27 +55,22 @@ struct FilterbankAnalysisConfiguration : public FilterbankConfiguration
     static Eigen::ArrayXXf initInput(const Coefficients &c)
     {
         int timeLength = c.bufferSize;
-        if (c.nChannels == 1) { timeLength *= 2; } // arbitrary time samples.
         return Eigen::ArrayXXf::Random(timeLength, c.nChannels);
     }
 
     static Eigen::ArrayXXcf initOutput(Input input, const Coefficients &c)
     {
-        int dim2 = c.nChannels;
-        if (c.nChannels == 1) { dim2 = static_cast<int>(input.rows()) / c.bufferSize; }
-        return Eigen::ArrayXXcf::Zero(c.nBands, dim2); // frequency bins
+        return Eigen::ArrayXXcf::Zero(c.nBands, c.nChannels); // frequency bins
     }
 
     static bool validInput(Input input, const Coefficients &c)
     {
-        if ((c.nChannels > 1) && (input.rows() != c.bufferSize)) { return false; }
-        return (input.rows() >= c.bufferSize) && (input.cols() == c.nChannels) && input.allFinite();
+        return (input.rows() == c.bufferSize) && (input.cols() == c.nChannels) && input.allFinite();
     }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        if ((c.nChannels > 1) && (output.cols() != c.nChannels)) { return false; }
-        return ((output.rows() == c.nBands) && (output.cols() > 0) && (output.allFinite()));
+        return ((output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output.allFinite()));
     }
 };
 
@@ -98,28 +93,22 @@ struct FilterbankSynthesisConfiguration : public FilterbankConfiguration
 
     static Eigen::ArrayXXcf initInput(const Coefficients &c)
     {
-        int dim2 = c.nChannels;
-        if (c.nChannels == 1) { dim2 = 2; }
-        return Eigen::ArrayXXcf::Random(c.nBands, dim2); // frequency bins
+        return Eigen::ArrayXXcf::Random(c.nBands, c.nChannels); // frequency bins
     }
 
     static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c)
     {
-        int timeLength = c.bufferSize; // time samples
-        if (c.nChannels == 1) { timeLength *= static_cast<int>(input.cols()); }
-        return Eigen::ArrayXXf::Zero(timeLength, c.nChannels);
+        return Eigen::ArrayXXf::Zero(c.bufferSize, c.nChannels);
     }
 
     static bool validInput(Input input, const Coefficients &c)
     {
-        if ((c.nChannels > 1) && (input.cols() != c.nChannels)) { return false; }
-        return (input.rows() == c.nBands) && (input.cols() > 0) && input.allFinite();
+        return (input.rows() == c.nBands) && (input.cols() == c.nChannels) && input.allFinite();
     }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        if ((c.nChannels > 1) && (output.rows() != c.bufferSize)) { return false; }
-        return (output.rows() >= c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite();
+        return (output.rows() == c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite();
     }
 };
 

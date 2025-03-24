@@ -118,19 +118,16 @@ class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<Filterba
   private:
     inline void processAlgorithm(Input xFreq, Output yTime)
     {
-        for (auto iFrame = 0; iFrame < xFreq.cols(); iFrame++)
+        fft.inverse(xFreq, fftBuffer.head(fftSize));
+        for (auto j = 1; j < nFolds; j++)
         {
-            fft.inverse(xFreq.col(iFrame), fftBuffer.head(fftSize));
-            for (auto j = 1; j < nFolds; j++)
-            {
-                fftBuffer.segment(j * fftSize, fftSize) = fftBuffer.head(fftSize);
-            }
-            timeBuffer += fftBuffer.tail(frameSize) * window;
-
-            yTime.col(0).segment(iFrame * C.bufferSize, C.bufferSize) = timeBuffer.head(C.bufferSize);
-            timeBuffer.head(overlap) = timeBuffer.tail(overlap);
-            timeBuffer.tail(C.bufferSize) = 0.f;
+            fftBuffer.segment(j * fftSize, fftSize) = fftBuffer.head(fftSize);
         }
+        timeBuffer += fftBuffer.tail(frameSize) * window;
+
+        yTime = timeBuffer.head(C.bufferSize);
+        timeBuffer.head(overlap) = timeBuffer.tail(overlap);
+        timeBuffer.tail(C.bufferSize) = 0.f;
     }
 
     bool isCoefficientsValid() const final { return FilterbankShared::isCoefficientsValid(C); }
