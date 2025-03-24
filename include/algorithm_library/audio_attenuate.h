@@ -22,9 +22,8 @@ struct AudioAttenuateConfiguration
 
     struct Coefficients
     {
-        float sampleRate = 48000;
         int bufferSize = 1024; // bufferSize is equal to bufferSize of the largest filterbank
-        DEFINE_TUNABLE_COEFFICIENTS(sampleRate, bufferSize)
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize)
     };
 
     struct Parameters

@@ -40,12 +40,11 @@ TEST(AudioAttenuate, ImpulseTest)
     // initialize algorithm
     AudioAttenuateAdaptive::Coefficients c;
     c.bufferSize = 1024;
-    c.sampleRate = 48000;
     AudioAttenuate algo(c);
 
     int impulseIndex = c.bufferSize * 1.5;
     int expectedDelay = 3 * c.bufferSize + 3 * c.bufferSize / 8 + impulseIndex; // delay of algorithm is delay of longest filterbank + audio combiner
-    int nFrames = 10; // number of input buffer sizes to send through algorithm
+    int nFrames = 10;                                                           // number of input buffer sizes to send through algorithm
     Eigen::ArrayXf input(nFrames * c.bufferSize), output(nFrames * c.bufferSize);
     input.setZero();
     input(impulseIndex) = 1; // impulse at the beginning of the input signal
@@ -63,7 +62,8 @@ TEST(AudioAttenuate, ImpulseTest)
         output.segment(i * c.bufferSize, c.bufferSize) = outputFrame;
     }
 
-    float error = std::abs(output(expectedDelay) - 1) + output.segment(0, expectedDelay).abs().sum() + output.segment(expectedDelay + 1, output.size() - expectedDelay - 1).abs().sum();
+    float error =
+        std::abs(output(expectedDelay) - 1) + output.segment(0, expectedDelay).abs().sum() + output.segment(expectedDelay + 1, output.size() - expectedDelay - 1).abs().sum();
     fmt::print("Delay: {}\n", expectedDelay);
     fmt::print("Error: {}\n", error);
     EXPECT_LT(error, 1e-6);
