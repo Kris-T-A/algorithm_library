@@ -64,13 +64,16 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/../../in
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/../../src)
 target_include_directories(${PROJECT_NAME} PRIVATE $ENV{EMSDK}/upstream/emscripten/cache/sysroot/include)
 
+target_compile_options(${PROJECT_NAME} PRIVATE  
+-msimd128 -msse4.2 -ffast-math -Wno-nan-infinity-disabled )
+
 # The project depends on the following libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE Eigen nlohmann_json::nlohmann_json)
 
 # Set Emscripten link flags
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
-                -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] \
+                -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
                 -s EXPORTED_FUNCTIONS=['_audio_attenuate'] \
                 -s NO_EXIT_RUNTIME=1"
 )

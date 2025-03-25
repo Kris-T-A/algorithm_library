@@ -1,5 +1,7 @@
+#include <nmmintrin.h>
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include <emscripten/bind.h>
+
 
 using namespace emscripten;
 
