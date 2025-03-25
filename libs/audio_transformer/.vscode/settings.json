@@ -1,0 +1,3 @@
+{
+    "cmake.buildDirectory": "${workspaceFolder}/../../build/audio_transformer/${buildType}"
+}
