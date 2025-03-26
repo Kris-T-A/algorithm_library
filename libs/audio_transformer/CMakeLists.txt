@@ -75,7 +75,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
                 -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
                 -s EXPORTED_FUNCTIONS=['_audio_attenuate'] \
-                -s NO_EXIT_RUNTIME=1"
+                -s NO_EXIT_RUNTIME=1 \
+                --closure 1"
 )
 
 # Debug build with assertions
