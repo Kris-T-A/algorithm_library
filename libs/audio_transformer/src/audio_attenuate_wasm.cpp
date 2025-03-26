@@ -21,8 +21,6 @@ extern "C"
      * @param output Output audio buffer (must be pre-allocated)
      * @param length Total length of input/output buffers in samples
      * @param bufferSize Size of processing buffer (must divide length evenly)
-     * @param progressCallback Optional callback for progress updates
-     * @param errorCallback Optional callback for error reporting
      *
      * @note nBands = 2 * bufferSize + 1
      * @note nFrames = length / bufferSize
