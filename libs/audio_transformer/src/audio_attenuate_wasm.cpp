@@ -1,5 +1,6 @@
 #include <nmmintrin.h>
 #include "audio_attenuate/audio_attenuate_adaptive.h"
+#include "spectrogram/spectrogram_set.h"
 #include <emscripten/bind.h>
 
 
@@ -13,6 +14,53 @@ extern "C"
     constexpr int FRAME_DELAY = 3;     // Number of frames that produce zero output
     constexpr int GAINS_PER_FRAME = 8; // number of gains per frame
     }                                  // namespace
+
+    EMSCRIPTEN_KEEPALIVE
+    void audio_spectral_analysis(const float *input, float *output, const int length, const int bufferSize)
+    {
+        // Validate input parameters
+        if (!input || !output) { return; }
+        if (length <= 0 || bufferSize <= 0 ) { return; }
+
+        // Create default configuration
+        SpectrogramConfiguration::Coefficients c;
+        c.bufferSize = bufferSize;
+        c.nBands = 2 * bufferSize + 1;
+        c.algorithmType = SpectrogramConfiguration::Coefficients::ADAPTIVE_HANN_8;
+
+        // Create instance of SpectrogramSet
+        SpectrogramSet spectrogram(c);
+
+        // derived values
+        const int nFrames = length / bufferSize;
+        const int nGainFrames = 8 * nFrames;
+        constexpr int outputDelay = FRAME_DELAY - 1;
+
+        // Map raw pointers to Eigen arrays
+        Eigen::Map<const Eigen::ArrayXf> inputAudio(input, length);
+        Eigen::Map<Eigen::ArrayXXf> outputSpectrogram(output, c.nBands, nGainFrames);
+        
+        // Process audio
+        for (int i = 0; i < outputDelay; i++)
+        {
+            spectrogram.process(inputAudio.segment(i * bufferSize, bufferSize), outputSpectrogram.middleCols(i * GAINS_PER_FRAME, GAINS_PER_FRAME));
+        }
+
+        // main process loop
+        for (auto iFrame = outputDelay; iFrame < nFrames; iFrame++)
+        {
+            const int iOutputFrame = iFrame - outputDelay;
+            spectrogram.process(inputAudio.segment(iFrame * bufferSize, bufferSize), outputSpectrogram.middleCols(iOutputFrame * GAINS_PER_FRAME, GAINS_PER_FRAME));
+        }
+
+        // get last output frames (input is zeroed for each frame)
+        Eigen::ArrayXf inputZeros = Eigen::ArrayXf::Zero(bufferSize);
+        for (int i = 0; i < outputDelay; i++)
+        {
+            spectrogram.process(inputZeros, outputSpectrogram.middleCols((nFrames - outputDelay + i) * GAINS_PER_FRAME, GAINS_PER_FRAME));
+        }
+    }
+
 
     /**
      * Process audio using attenuation
