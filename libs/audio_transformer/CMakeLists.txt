@@ -74,7 +74,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Eigen nlohmann_json::nlohmann_json
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
                 -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
-                -s EXPORTED_FUNCTIONS=['_audio_attenuate'] \
+                -s EXPORTED_FUNCTIONS=['_audio_attenuate', 'malloc', 'free'] \
                 -s NO_EXIT_RUNTIME=1 \
                 --closure 1"
 )
