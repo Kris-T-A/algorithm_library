@@ -11,16 +11,18 @@ extern "C"
 
     namespace
     {
-    constexpr int FRAME_DELAY = 3;     // Number of frames that produce zero output
-    constexpr int GAINS_PER_FRAME = 8; // number of gains per frame
+        constexpr int ANALYSIS_DELAY = 2; // number of buffers delay in analysis
+        constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
+        constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;     // Number of buffers that produce zero output
+        constexpr int FRAMES_PER_BUFFER = 8; // number of frames per buffer
     }                                  // namespace
 
     EMSCRIPTEN_KEEPALIVE
-    void audio_spectral_analysis(const float *input, float *output, const int length, const int bufferSize)
+    void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float *output)
     {
         // Validate input parameters
         if (!input || !output) { return; }
-        if (length <= 0 || bufferSize <= 0 ) { return; }
+        if (bufferSize <= 0 || nBuffers <= 0) { return; }
 
         // Create default configuration
         SpectrogramConfiguration::Coefficients c;
@@ -32,32 +34,17 @@ extern "C"
         SpectrogramSet spectrogram(c);
 
         // derived values
-        const int nFrames = length / bufferSize;
-        const int nGainFrames = 8 * nFrames;
-        constexpr int outputDelay = FRAME_DELAY - 1;
+        const int length = bufferSize * nBuffers; // total length of input in samples
+        const int nFrames = FRAMES_PER_BUFFER * nBuffers; // number of buffers in gain spectrogram
 
         // Map raw pointers to Eigen arrays
         Eigen::Map<const Eigen::ArrayXf> inputAudio(input, length);
-        Eigen::Map<Eigen::ArrayXXf> outputSpectrogram(output, c.nBands, nGainFrames);
+        Eigen::Map<Eigen::ArrayXXf> outputSpectrogram(output, c.nBands, nFrames);
         
         // Process audio
-        for (int i = 0; i < outputDelay; i++)
+        for (int iBuffer = 0; iBuffer < nBuffers; iBuffer++)
         {
-            spectrogram.process(inputAudio.segment(i * bufferSize, bufferSize), outputSpectrogram.middleCols(i * GAINS_PER_FRAME, GAINS_PER_FRAME));
-        }
-
-        // main process loop
-        for (auto iFrame = outputDelay; iFrame < nFrames; iFrame++)
-        {
-            const int iOutputFrame = iFrame - outputDelay;
-            spectrogram.process(inputAudio.segment(iFrame * bufferSize, bufferSize), outputSpectrogram.middleCols(iOutputFrame * GAINS_PER_FRAME, GAINS_PER_FRAME));
-        }
-
-        // get last output frames (input is zeroed for each frame)
-        Eigen::ArrayXf inputZeros = Eigen::ArrayXf::Zero(bufferSize);
-        for (int i = 0; i < outputDelay; i++)
-        {
-            spectrogram.process(inputZeros, outputSpectrogram.middleCols((nFrames - outputDelay + i) * GAINS_PER_FRAME, GAINS_PER_FRAME));
+            spectrogram.process(inputAudio.segment(iBuffer * bufferSize, bufferSize), outputSpectrogram.middleCols(iBuffer * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER));
         }
     }
 
@@ -101,26 +88,26 @@ extern "C"
         // Process audio
 
         // Initial frames give zero output
-        for (int i = 0; i < FRAME_DELAY; i++)
+        for (int i = 0; i < BUFFER_DELAY; i++)
         {
-            attenuator.process({inputAudio.segment(i * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols(i * GAINS_PER_FRAME, GAINS_PER_FRAME)},
+            attenuator.process({inputAudio.segment(i * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols(i * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER)},
                                outputAudio.segment(0, bufferSize));
         }
 
         // main process loop
-        for (auto iFrame = FRAME_DELAY; iFrame < nFrames; iFrame++)
+        for (auto iFrame = BUFFER_DELAY; iFrame < nFrames; iFrame++)
         {
-            const int iOutputFrame = iFrame - FRAME_DELAY;
-            attenuator.process({inputAudio.segment(iFrame * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols(iFrame * GAINS_PER_FRAME, GAINS_PER_FRAME)},
+            const int iOutputFrame = iFrame - BUFFER_DELAY;
+            attenuator.process({inputAudio.segment(iFrame * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols(iFrame * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER)},
                                outputAudio.segment(iOutputFrame * bufferSize, bufferSize));
         }
 
         // get last output frames (input is repeated for each frame)
-        for (int i = 0; i < FRAME_DELAY; i++)
+        for (int i = 0; i < BUFFER_DELAY; i++)
         {
             attenuator.process(
-                {inputAudio.segment((nFrames - 1) * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols((nFrames - 1) * GAINS_PER_FRAME, GAINS_PER_FRAME)},
-                outputAudio.segment((nFrames - FRAME_DELAY + i) * bufferSize, bufferSize));
+                {inputAudio.segment((nFrames - 1) * bufferSize, bufferSize), gainSpectrogramMatrix.middleCols((nFrames - 1) * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER)},
+                outputAudio.segment((nFrames - BUFFER_DELAY + i) * bufferSize, bufferSize));
         }
     }
 }
