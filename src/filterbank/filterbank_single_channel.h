@@ -107,6 +107,14 @@ class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<Filterba
 
     float getDelaySamples() const { return FilterbankShared::getDelaySamples(window); }
 
+    // set window if length equals frameSize
+    void setWindow(I::Real win)
+    {
+        if (win.size() == frameSize) { window = win; }
+    }
+
+    Eigen::ArrayXf getWindow() const { return window; }
+
   private:
     inline void processAlgorithm(Input xFreq, Output yTime)
     {
