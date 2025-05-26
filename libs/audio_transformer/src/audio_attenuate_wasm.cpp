@@ -1,8 +1,7 @@
-#include <nmmintrin.h>
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "spectrogram/spectrogram_set.h"
 #include <emscripten/bind.h>
-
+#include <nmmintrin.h>
 
 using namespace emscripten;
 
@@ -11,11 +10,11 @@ extern "C"
 
     namespace
     {
-        constexpr int ANALYSIS_DELAY = 2; // number of buffers delay in analysis
-        constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
-        constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;     // Number of buffers that produce zero output
-        constexpr int FRAMES_PER_BUFFER = 8; // number of frames per buffer
-    }                                  // namespace
+    constexpr int ANALYSIS_DELAY = 2;                // number of buffers delay in analysis
+    constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
+    constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
+    constexpr int FRAMES_PER_BUFFER = 8;             // number of frames per buffer
+    } // namespace
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float *output)
@@ -34,20 +33,19 @@ extern "C"
         SpectrogramSet spectrogram(c);
 
         // derived values
-        const int length = bufferSize * nBuffers; // total length of input in samples
+        const int length = bufferSize * nBuffers;         // total length of input in samples. It is callers responsibility to ensure that input is at least this long
         const int nFrames = FRAMES_PER_BUFFER * nBuffers; // number of buffers in gain spectrogram
 
         // Map raw pointers to Eigen arrays
         Eigen::Map<const Eigen::ArrayXf> inputAudio(input, length);
         Eigen::Map<Eigen::ArrayXXf> outputSpectrogram(output, c.nBands, nFrames);
-        
+
         // Process audio
         for (int iBuffer = 0; iBuffer < nBuffers; iBuffer++)
         {
             spectrogram.process(inputAudio.segment(iBuffer * bufferSize, bufferSize), outputSpectrogram.middleCols(iBuffer * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER));
         }
     }
-
 
     /**
      * Process audio using attenuation
@@ -66,7 +64,7 @@ extern "C"
     {
         // Validate input parameters
         if (!input || !gainSpectrogram || !output) { return; }
-        if (length <= 0 || bufferSize <= 0 ) { return; }
+        if (length <= 0 || bufferSize <= 0) { return; }
 
         // Create default configuration
         AudioAttenuateConfiguration::Coefficients c;
