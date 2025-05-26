@@ -54,15 +54,22 @@ bool getSetTest(const typename Talgo::Coefficients &c = typename Talgo::Coeffici
     }
 
     algo.setCoefficients(c);
-    auto cTree = algo.getCoefficientsTree();
-    algo.setCoefficientsTree(cTree);
     auto sizeOut2 = algo.getDynamicSize();
-    if (sizeOut != sizeOut2)
+    if (size != sizeOut2)
     {
-        fmt::print("getSetTest failed. Coefficient test failed since dynamic memory changed after setting coefficients. Before: {}. After: {}\n", sizeOut, sizeOut2);
+        fmt::print("getSetTest failed. Coefficient test failed since dynamic memory changed after setting coefficients. Before: {}. After: {}\n", size, sizeOut2);
         return false;
     }
-    if (size != sizeOut2)
+
+    auto cTree = algo.getCoefficientsTree();
+    algo.setCoefficientsTree(cTree);
+    auto sizeOut3 = algo.getDynamicSize();
+    if (size != sizeOut3)
+    {
+        fmt::print("getSetTest failed. Coefficient tree test failed since dynamic memory changed after setting tree coefficients. Before: {}. After: {}\n", size, sizeOut3);
+        return false;
+    }
+    if (size != sizeOut3)
     {
         fmt::print("getSetTest failed. Coefficient test failed.\n");
         return false;
@@ -71,17 +78,18 @@ bool getSetTest(const typename Talgo::Coefficients &c = typename Talgo::Coeffici
     auto s = algo.getSetup();
     algo.setSetup(s);
     sizeOut = algo.getDynamicSize();
+    if (size != sizeOut)
+    {
+        fmt::print("getSetTest failed. Setup test failed since dynamic memory changed after setting setup. Before: {}. After: {}\n", size, sizeOut);
+        return false;
+    }
+
     auto sTree = algo.getSetupTree();
     algo.setSetupTree(sTree);
     sizeOut2 = algo.getDynamicSize();
-    if (sizeOut != sizeOut2)
-    {
-        fmt::print("getSetTest failed. Setup test failed since dynamic memory changed after setting setup. Before: {}. After: {}\n", sizeOut, sizeOut2);
-        return false;
-    }
     if (size != sizeOut2)
     {
-        fmt::print("getSetTest failed. Setup test failed.\n");
+        fmt::print("getSetTest failed. Setup tree test failed since dynamic memory changed after setting tree setup. Before: {}. After: {}\n", size, sizeOut2);
         return false;
     }
 
