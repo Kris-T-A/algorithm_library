@@ -141,10 +141,15 @@ class FilterbankSetSynthesisWOLA : public AlgorithmImplementation<FilterbankSetS
         bufferSizes.resize(C.nFilterbanks);
         nBuffers[0] = 1;
         bufferSizes[0] = C.bufferSize;
+        float winScale = FilterbankShared::getAnalysisWindow(inverseFilterbanks[0].getCoefficients()).abs2().sum();
         for (auto i = 1; i < C.nFilterbanks; i++)
         {
             nBuffers[i] = nBuffers[i - 1] * 2;
             bufferSizes[i] = bufferSizes[i - 1] / 2;
+            Eigen::ArrayXf window = inverseFilterbanks[i].getWindow();
+            // calculate inverse scale factor of the analysis filterbank to ensure perfect reconstruction
+            window *= std::sqrt(FilterbankShared::getAnalysisWindow(inverseFilterbanks[i].getCoefficients()).abs2().sum() / winScale);
+            inverseFilterbanks[i].setWindow(window);
         }
     }
 
