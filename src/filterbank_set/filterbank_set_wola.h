@@ -13,10 +13,14 @@ class FilterbankSetAnalysisWOLA : public AlgorithmImplementation<FilterbankSetAn
         bufferSizes.resize(C.nFilterbanks);
         nBuffers[0] = 1;
         bufferSizes[0] = C.bufferSize;
+        float winScale = filterbanks[0].getWindow().abs2().sum();
         for (auto i = 1; i < C.nFilterbanks; i++)
         {
             nBuffers[i] = nBuffers[i - 1] * 2;
             bufferSizes[i] = bufferSizes[i - 1] / 2;
+            Eigen::ArrayXf window = filterbanks[i].getWindow();
+            window *= std::sqrt(winScale / window.abs2().sum()); // scale the window to have the same energy as the first filterbank
+            filterbanks[i].setWindow(window);
         }
     }
 
