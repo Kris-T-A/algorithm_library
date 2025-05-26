@@ -10,14 +10,8 @@ class NoiseReductionPath : public AlgorithmImplementation<SingleChannelPathConfi
   public:
     NoiseReductionPath(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c}, //
-          filterbank({.nChannels = 1,
-                      .bufferSize = c.bufferSize,
-                      .nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize),
-                      .filterbankType = FilterbankConfiguration::Coefficients::HANN}),
-          filterbankInverse({.nChannels = 1,
-                             .bufferSize = c.bufferSize,
-                             .nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize),
-                             .filterbankType = FilterbankConfiguration::Coefficients::HANN}),
+          filterbank({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize), .nFolds = 1}),
+          filterbankInverse({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize), .nFolds = 1}),
           noiseReduction({.nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize), .nChannels = 1, .filterbankRate = c.sampleRate / c.bufferSize}),
           dcRemover({.nChannels = 1, .sampleRate = c.sampleRate})
     {

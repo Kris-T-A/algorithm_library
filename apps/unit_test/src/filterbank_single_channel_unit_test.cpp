@@ -12,14 +12,14 @@ TEST(FilterbankSingleChannel, Reconstruct)
     // setup filterbanks
     FilterbankAnalysisSingleChannel::Coefficients cAnalysis;
     cAnalysis.bufferSize = 1024;
-    cAnalysis.filterbankType = FilterbankAnalysisSingleChannel::Coefficients::HANN;
+    cAnalysis.nFolds = 1;
     cAnalysis.nBands = 2 * cAnalysis.bufferSize + 1;
     cAnalysis.nChannels = 1;
     FilterbankAnalysisSingleChannel filterbank(cAnalysis);
 
     FilterbankSynthesisSingleChannel::Coefficients cSynthesis;
     cSynthesis.bufferSize = cAnalysis.bufferSize;
-    cSynthesis.filterbankType = FilterbankSynthesisSingleChannel::Coefficients::HANN;
+    cSynthesis.nFolds = 1;
     cSynthesis.nBands = cAnalysis.nBands;
     cSynthesis.nChannels = cAnalysis.nChannels;
     FilterbankSynthesisSingleChannel filterbankInverse(cSynthesis);

@@ -1,7 +1,8 @@
-#include "filterbank/filterbank_wola.h"
 #include "filterbank/filterbank_single_channel.h"
+#include "filterbank/filterbank_wola.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
+
 using namespace Eigen;
 
 // --------------------------------------------- TEST CASES ---------------------------------------------
@@ -21,12 +22,12 @@ TEST(Filterbank, ReconstructionHighQuality)
     const int nFrames = 100; // number of frames to process
 
     auto c = FilterbankAnalysis::Coefficients();
-    c.filterbankType = c.WOLA;
+    c.nFolds = 2;
     c.nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize);
     FilterbankAnalysis filterbank(c);
 
     auto cInv = FilterbankSynthesis::Coefficients();
-    cInv.filterbankType = cInv.WOLA;
+    cInv.nFolds = 2;
     cInv.nBands = FFTConfiguration::convertFFTSizeToNBands(4 * cInv.bufferSize);
     FilterbankSynthesis filterbankInv(cInv);
 
@@ -48,40 +49,6 @@ TEST(Filterbank, ReconstructionHighQuality)
     EXPECT_LT(error, 1e-6f);
 }
 
-// Description: Send random signal through Sqrt_Hann filterbank and reconstruct it.
-// pass/fail: check reconstruction error is below threshold.
-TEST(Filterbank, ReconstructionSqrtHann)
-{
-    const int nFrames = 100; // number of frames to process
-
-    auto c = FilterbankAnalysis::Coefficients();
-    c.filterbankType = c.SQRT_HANN;
-    c.nBands = FFTConfiguration::convertFFTSizeToNBands(2 * c.bufferSize);
-    FilterbankAnalysis filterbank(c);
-
-    auto cInv = FilterbankSynthesis::Coefficients();
-    cInv.filterbankType = cInv.SQRT_HANN;
-    cInv.nBands = FFTConfiguration::convertFFTSizeToNBands(2 * cInv.bufferSize);
-    FilterbankSynthesis filterbankInv(cInv);
-
-    ArrayXXf input(nFrames * c.bufferSize, c.nChannels);
-    input.setRandom();
-    ArrayXXf output(nFrames * c.bufferSize, c.nChannels);
-
-    auto outFreq = filterbank.initOutput(input.topRows(c.bufferSize));
-    for (auto i = 0; i < nFrames; i++)
-    {
-        filterbank.process(input.middleRows(i * c.bufferSize, c.bufferSize), outFreq);
-        filterbankInv.process(outFreq, output.middleRows(i * c.bufferSize, c.bufferSize));
-    }
-    int offset = c.bufferSize; // frameSize - bufferSize = 2 * bufferSize - bufferSize
-    float error = (input.topRows(nFrames * c.bufferSize - offset) - output.bottomRows(nFrames * c.bufferSize - offset)).abs2().mean();
-    error /= input.topRows(nFrames * c.bufferSize - offset).abs2().mean();
-
-    fmt::print("Output error: {}\n", error);
-    EXPECT_LT(error, 1e-6f);
-}
-
 // Description: Send random signal through Hann filterbank and reconstruct it.
 // pass/fail: check reconstruction error is below threshold.
 TEST(Filterbank, ReconstructionStandard)
@@ -89,12 +56,12 @@ TEST(Filterbank, ReconstructionStandard)
     const int nFrames = 100; // number of frames to process
 
     auto c = FilterbankAnalysis::Coefficients();
-    c.filterbankType = c.HANN;
+    c.nFolds = 1;
     c.nBands = FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize);
     FilterbankAnalysis filterbank(c);
 
     auto cInv = FilterbankSynthesis::Coefficients();
-    cInv.filterbankType = cInv.HANN;
+    cInv.nFolds = 1;
     cInv.nBands = FFTConfiguration::convertFFTSizeToNBands(4 * cInv.bufferSize);
     FilterbankSynthesis filterbankInv(cInv);
 

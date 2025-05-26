@@ -7,22 +7,19 @@
 
 // --------------------------------------------------- FilterbankAnalysisSimple ---------------------------------------------------------
 // FilterbankAnalysisSimple is a class that implements the simplest possible DFT-based filterbank. It only supports the configuration:
-// nChannel = 1
+// nChannels = 1
 // nBands = (bufferSize*4)/2+1
-// filterbankType = HANN
+// nFolds = 1
 //
 // author: Kristian Timm Andersen
 
 class FilterbankAnalysisSimple : public AlgorithmImplementation<FilterbankAnalysisConfiguration, FilterbankAnalysisSimple>
 {
   public:
-    FilterbankAnalysisSimple(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .filterbankType = Coefficients::HANN})
+    FilterbankAnalysisSimple(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .nFolds = 1})
         : BaseAlgorithm{c}, fft({FFTConfiguration::convertNBandsToFFTSize(c.nBands)})
     {
-        if ((c.nChannels != 1) || (c.nBands != c.bufferSize * 2 + 1) || (c.filterbankType != c.HANN))
-        {
-            throw Configuration::ExceptionFilterbank("FilterbankAnalysisSimple", c);
-        }
+        if ((c.nChannels != 1) || (c.nBands != c.bufferSize * 2 + 1) || (c.nFolds != 1)) { throw Configuration::ExceptionFilterbank("FilterbankAnalysisSimple", c); }
         fftSize = FFTConfiguration::convertNBandsToFFTSize(c.nBands);
         window = FilterbankShared::getAnalysisWindow(c);
         overlap = fftSize - C.bufferSize;
@@ -78,13 +75,10 @@ class FilterbankAnalysisSimple : public AlgorithmImplementation<FilterbankAnalys
 class FilterbankSynthesisSimple : public AlgorithmImplementation<FilterbankSynthesisConfiguration, FilterbankSynthesisSimple>
 {
   public:
-    FilterbankSynthesisSimple(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .filterbankType = Coefficients::HANN})
+    FilterbankSynthesisSimple(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .nFolds = 1})
         : BaseAlgorithm{c}, fft({FFTConfiguration::convertNBandsToFFTSize(c.nBands)})
     {
-        if ((c.nChannels != 1) || (c.filterbankType != c.HANN) || (c.nBands != c.bufferSize * 2 + 1))
-        {
-            throw Configuration::ExceptionFilterbank("FilterbankSynthesisSimple", c);
-        }
+        if ((c.nChannels != 1) || (c.nBands != c.bufferSize * 2 + 1) || (c.nFolds != 1)) { throw Configuration::ExceptionFilterbank("FilterbankSynthesisSimple", c); }
         fftSize = FFTConfiguration::convertNBandsToFFTSize(c.nBands);
         window = FilterbankShared::getSynthesisWindow(c);
         overlap = fftSize - C.bufferSize;

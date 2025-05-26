@@ -18,16 +18,19 @@ struct FilterbankConfiguration
         int nChannels = 2;
         int bufferSize = 128;
         int nBands = 257;
-        enum FilterbankTypes { HANN, SQRT_HANN, WOLA, USER_DEFINED };
-        FilterbankTypes filterbankType = HANN;
-        DEFINE_TUNABLE_ENUM(FilterbankTypes, {{HANN, "Hann"}, {SQRT_HANN, "Sqrt Hann"}, {WOLA, "Wola"}, {USER_DEFINED, "User Defined"}})
-        DEFINE_TUNABLE_COEFFICIENTS(nChannels, bufferSize, nBands, filterbankType)
+        int nFolds = 1; // number of folds: frameSize = nFolds * 2 * (nBands - 1)
+        DEFINE_TUNABLE_COEFFICIENTS(nChannels, bufferSize, nBands, nFolds)
     };
 
     struct Parameters
     {
         DEFINE_NO_TUNABLE_PARAMETERS
     };
+
+    static int calculateFrameSize(const Coefficients &c)
+    {
+        return c.nFolds * 2 * (c.nBands - 1); // frameSize = nFolds * 2 * (nBands - 1)
+    }
 
     // exception for constructing filterbank with unsupported Configuration
     class ExceptionFilterbank : public std::runtime_error
@@ -63,15 +66,9 @@ struct FilterbankAnalysisConfiguration : public FilterbankConfiguration
         return Eigen::ArrayXXcf::Zero(c.nBands, c.nChannels); // frequency bins
     }
 
-    static bool validInput(Input input, const Coefficients &c)
-    {
-        return (input.rows() == c.bufferSize) && (input.cols() == c.nChannels) && input.allFinite();
-    }
+    static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && (input.cols() == c.nChannels) && input.allFinite(); }
 
-    static bool validOutput(Output output, const Coefficients &c)
-    {
-        return ((output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output.allFinite()));
-    }
+    static bool validOutput(Output output, const Coefficients &c) { return ((output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output.allFinite())); }
 };
 
 // Analysis filterbank
@@ -96,20 +93,11 @@ struct FilterbankSynthesisConfiguration : public FilterbankConfiguration
         return Eigen::ArrayXXcf::Random(c.nBands, c.nChannels); // frequency bins
     }
 
-    static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c)
-    {
-        return Eigen::ArrayXXf::Zero(c.bufferSize, c.nChannels);
-    }
+    static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c) { return Eigen::ArrayXXf::Zero(c.bufferSize, c.nChannels); }
 
-    static bool validInput(Input input, const Coefficients &c)
-    {
-        return (input.rows() == c.nBands) && (input.cols() == c.nChannels) && input.allFinite();
-    }
+    static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.nBands) && (input.cols() == c.nChannels) && input.allFinite(); }
 
-    static bool validOutput(Output output, const Coefficients &c)
-    {
-        return (output.rows() == c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite();
-    }
+    static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
 class FilterbankSynthesis : public Algorithm<FilterbankSynthesisConfiguration>

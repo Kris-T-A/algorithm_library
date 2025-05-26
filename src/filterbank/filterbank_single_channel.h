@@ -12,7 +12,7 @@
 class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<FilterbankAnalysisConfiguration, FilterbankAnalysisSingleChannel>
 {
   public:
-    FilterbankAnalysisSingleChannel(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .filterbankType = Coefficients::HANN})
+    FilterbankAnalysisSingleChannel(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .nFolds = 1})
         : BaseAlgorithm{c}, fft({FFTConfiguration::convertNBandsToFFTSize(c.nBands)})
     {
         if (c.nChannels != 1) { throw Configuration::ExceptionFilterbank("FilterbankAnalysisSingleChannel", c); }
@@ -20,9 +20,7 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
         window = FilterbankShared::getAnalysisWindow(c);
         frameSize = static_cast<int>(window.size());
         overlap = frameSize - C.bufferSize;
-        nFolds = static_cast<int>(std::ceil(static_cast<float>(frameSize) / fftSize));
-        maxSize = fftSize * nFolds;
-        fftBuffer.resize(maxSize);
+        fftBuffer.resize(frameSize);
         timeBuffer.resize(frameSize);
 
         resetVariables();
@@ -40,11 +38,7 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
     // set window if length equals frameSize
     void setWindow(I::Real win)
     {
-        if (win.size() == frameSize)
-        {
-            C.filterbankType = C.USER_DEFINED; // force overwrite
-            window = win;
-        }
+        if (win.size() == frameSize) { window = win; }
     }
 
     Eigen::ArrayXf getWindow() const { return window; }
@@ -54,8 +48,8 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
     {
         timeBuffer.head(overlap) = timeBuffer.tail(overlap);
         timeBuffer.tail(C.bufferSize) = xTime.col(0).head(C.bufferSize);
-        fftBuffer.head(frameSize) = timeBuffer * window;
-        for (auto j = 1; j < nFolds; j++)
+        fftBuffer = timeBuffer * window;
+        for (auto j = 1; j < C.nFolds; j++)
         {
             fftBuffer.head(fftSize) += fftBuffer.segment(j * fftSize, fftSize);
         }
@@ -81,7 +75,7 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
     int frameSize, fftSize;
     Eigen::ArrayXf window, fftBuffer;
     Eigen::ArrayXf timeBuffer;
-    int overlap, nFolds, maxSize;
+    int overlap;
 
     friend BaseAlgorithm;
 };
@@ -91,7 +85,7 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
 class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<FilterbankSynthesisConfiguration, FilterbankSynthesisSingleChannel>
 {
   public:
-    FilterbankSynthesisSingleChannel(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .filterbankType = Coefficients::HANN})
+    FilterbankSynthesisSingleChannel(Coefficients c = {.nChannels = 1, .bufferSize = 128, .nBands = 257, .nFolds = 1})
         : BaseAlgorithm{c}, fft({FFTConfiguration::convertNBandsToFFTSize(c.nBands)})
     {
         if (c.nChannels != 1) { throw Configuration::ExceptionFilterbank("FilterbankSynthesisSingleChannel", c); }
@@ -99,9 +93,7 @@ class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<Filterba
         window = FilterbankShared::getSynthesisWindow(c);
         frameSize = static_cast<int>(window.size());
         overlap = frameSize - C.bufferSize;
-        nFolds = static_cast<int>(std::ceil(static_cast<float>(frameSize) / fftSize));
-        maxSize = fftSize * nFolds;
-        fftBuffer.resize(maxSize);
+        fftBuffer.resize(frameSize);
         timeBuffer.resize(frameSize);
 
         resetVariables();
@@ -119,11 +111,11 @@ class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<Filterba
     inline void processAlgorithm(Input xFreq, Output yTime)
     {
         fft.inverse(xFreq, fftBuffer.head(fftSize));
-        for (auto j = 1; j < nFolds; j++)
+        for (auto j = 1; j < C.nFolds; j++)
         {
             fftBuffer.segment(j * fftSize, fftSize) = fftBuffer.head(fftSize);
         }
-        timeBuffer += fftBuffer.tail(frameSize) * window;
+        timeBuffer += fftBuffer * window;
 
         yTime = timeBuffer.head(C.bufferSize);
         timeBuffer.head(overlap) = timeBuffer.tail(overlap);
@@ -149,7 +141,7 @@ class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<Filterba
     int fftSize, frameSize;
     Eigen::ArrayXf window, fftBuffer;
     Eigen::ArrayXf timeBuffer;
-    int overlap, nFolds, maxSize;
+    int overlap;
 
     friend BaseAlgorithm;
 };

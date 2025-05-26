@@ -44,10 +44,8 @@ class AudioCombineMax : public AlgorithmImplementation<AudioCombineConfiguration
 {
   public:
     AudioCombineMax(const Coefficients &c = Coefficients())
-        : BaseAlgorithm{c},
-          filterbankAnalysis(
-              {.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .filterbankType = FilterbankAnalysisWOLA::Coefficients::HANN}),
-          filterbankSynthesis({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .filterbankType = FilterbankSynthesisWOLA::Coefficients::HANN})
+        : BaseAlgorithm{c}, filterbankAnalysis({.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFolds = 1}),
+          filterbankSynthesis({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFolds = 1})
     {
         nBands = 2 * c.bufferSize + 1;
         spectrogramOut.resize(nBands, c.nChannels);
@@ -96,10 +94,8 @@ class AudioCombineMin : public AlgorithmImplementation<AudioCombineConfiguration
 {
   public:
     AudioCombineMin(const Coefficients &c = Coefficients())
-        : BaseAlgorithm{c},
-          filterbankAnalysis(
-              {.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .filterbankType = FilterbankAnalysisWOLA::Coefficients::HANN}),
-          filterbankSynthesis({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .filterbankType = FilterbankSynthesisWOLA::Coefficients::HANN})
+        : BaseAlgorithm{c}, filterbankAnalysis({.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFolds = 1}),
+          filterbankSynthesis({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFolds = 1})
     {
         nBands = 2 * c.bufferSize + 1;
         spectrogramOut.resize(nBands, c.nChannels);

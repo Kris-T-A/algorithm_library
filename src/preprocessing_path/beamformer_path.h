@@ -12,11 +12,10 @@ class BeamformerPath : public AlgorithmImplementation<PreprocessingPathConfigura
 
   public:
     BeamformerPath(const Coefficients &c = Coefficients())
-        : BaseAlgorithm{c},
-          nBands{FFTConfiguration::convertFFTSizeToNBands(4 * c.bufferSize)}, // important to define this before member algorithms, since nBands is passed to constructors!
-          filterbank({.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = nBands, .filterbankType = FilterbankAnalysisConfiguration::Coefficients::HANN}),
-          filterbankInverse(
-              {.nChannels = 1, .bufferSize = c.bufferSize, .nBands = nBands, .filterbankType = FilterbankSynthesisConfiguration::Coefficients::HANN}), // only 1 channel
+        : BaseAlgorithm{c}, nBands{FFTConfiguration::convertFFTSizeToNBands(
+                                4 * c.bufferSize)}, // important to define this before member algorithms, since nBands is passed to constructors!
+          filterbank({.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = nBands, .nFolds = 1}),
+          filterbankInverse({.nChannels = 1, .bufferSize = c.bufferSize, .nBands = nBands, .nFolds = 1}), // only 1 channel
           beamformer({.nChannels = c.nChannels, .filterbankRate = c.sampleRate / c.bufferSize, .nBands = nBands}),
           activityDetector({.filterbankRate = c.sampleRate / c.bufferSize, .nBands = nBands, .nChannels = c.nChannels}),
           dcRemover({.nChannels = c.nChannels, .sampleRate = c.sampleRate})

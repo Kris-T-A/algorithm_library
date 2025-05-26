@@ -122,8 +122,7 @@ class FilterbankSetAnalysisWOLA : public AlgorithmImplementation<FilterbankSetAn
             cFB[i].bufferSize = c.bufferSize / positivePow2(i);
             cFB[i].nBands = (c.nBands - 1) / positivePow2(i) + 1;
             cFB[i].nChannels = 1;
-            cFB[i].filterbankType =
-                c.filterbankType == Coefficients::WOLA ? FilterbankAnalysisSingleChannel::Coefficients::WOLA : FilterbankAnalysisSingleChannel::Coefficients::HANN;
+            cFB[i].nFolds = c.nFolds;
         }
         return cFB;
     }
@@ -175,8 +174,7 @@ class FilterbankSetSynthesisWOLA : public AlgorithmImplementation<FilterbankSetS
             cFB[i].bufferSize = c.bufferSize / positivePow2(i);
             cFB[i].nBands = (c.nBands - 1) / positivePow2(i) + 1;
             cFB[i].nChannels = 1;
-            cFB[i].filterbankType =
-                c.filterbankType == Coefficients::WOLA ? FilterbankAnalysisSingleChannel::Coefficients::WOLA : FilterbankAnalysisSingleChannel::Coefficients::HANN;
+            cFB[i].nFolds = c.nFolds;
         }
         return cFB;
     }

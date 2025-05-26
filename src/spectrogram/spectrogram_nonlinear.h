@@ -62,11 +62,11 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
         cFilterbank.nBands = c.nBands;
         if (c.algorithmType == Coefficients::ADAPTIVE_HANN_8)
         {
-            cFilterbank.filterbankType = FilterbankAnalysisWOLA::Coefficients::HANN; // sets correct window size, but values are overwritten in constructor
+            cFilterbank.nFolds = 1; // sets correct window size, but values are overwritten in constructor
         }
         else if (c.algorithmType == Coefficients::ADAPTIVE_WOLA_8)
         {
-            cFilterbank.filterbankType = FilterbankAnalysisWOLA::Coefficients::WOLA; // sets correct window size, but values are overwritten in constructor
+            cFilterbank.nFolds = 2; // sets correct window size, but values are overwritten in constructor
         }
         return cFilterbank;
     }

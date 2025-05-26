@@ -19,10 +19,8 @@ struct FilterbankSetAnalysisConfiguration
         int bufferSize = 1024; // buffer size in the first filterbank
         int nBands = 2049;     // number of frequency bands in the first filterbank
         int nFilterbanks = 4;  // each filterbank halves the buffer size
-        enum FilterbankTypes { HANN, WOLA };
-        FilterbankTypes filterbankType = HANN;
-        DEFINE_TUNABLE_ENUM(FilterbankTypes, {{HANN, "Hann"}, {WOLA, "Wola"}})
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nFilterbanks, filterbankType)
+        int nFolds = 1;        // number of folds: frameSize = nFolds * 2 * (nBands - 1)
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nFilterbanks, nFolds)
     };
 
     struct Parameters
@@ -82,11 +80,8 @@ struct FilterbankSetSynthesisConfiguration
         int bufferSize = 1024; // buffer size in the first filterbank
         int nBands = 2049;     // number of frequency bands in the first filterbank
         int nFilterbanks = 4;  // each filterbank doubles the buffer size
-        enum FilterbankTypes { HANN, WOLA };
-        FilterbankTypes filterbankType = HANN;
-        DEFINE_TUNABLE_ENUM(FilterbankTypes, {{HANN, "Hann"}, {WOLA, "Wola"}})
-
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nFilterbanks, filterbankType)
+        int nFolds = 1;        // number of folds: frameSize = nFolds * 2 * (nBands - 1)
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nFilterbanks, nFolds)
     };
 
     struct Parameters

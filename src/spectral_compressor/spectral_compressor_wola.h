@@ -85,7 +85,7 @@ class SpectralCompressorWOLA : public AlgorithmImplementation<SpectralCompressor
         cFilterbank.bufferSize = c.bufferSize;
         cFilterbank.nChannels = c.nChannels;
         cFilterbank.nBands = FFTReal::Configuration::convertFFTSizeToNBands(c.bufferSize * 4);
-        cFilterbank.filterbankType = cFilterbank.HANN;
+        cFilterbank.nFolds = 1;
         return cFilterbank;
     }
 
@@ -95,7 +95,7 @@ class SpectralCompressorWOLA : public AlgorithmImplementation<SpectralCompressor
         cFilterbank.bufferSize = c.bufferSize;
         cFilterbank.nChannels = c.nChannels;
         cFilterbank.nBands = FFTReal::Configuration::convertFFTSizeToNBands(c.bufferSize * 4);
-        cFilterbank.filterbankType = cFilterbank.HANN;
+        cFilterbank.nFolds = 1;
         return cFilterbank;
     }
 

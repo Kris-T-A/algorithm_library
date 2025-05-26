@@ -13,14 +13,9 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
   public:
     AudioAttenuateAdaptive(const Coefficients &c = Coefficients())
         : BaseAlgorithm(c), bufferSizeSmall(c.bufferSize / Configuration::nGains),
-          filterbankAnalysis({.bufferSize = c.bufferSize,
-                              .nBands = 2 * c.bufferSize + 1,
-                              .nFilterbanks = nFilterbanks,
-                              .filterbankType = FilterbankSetAnalysisConfiguration::Coefficients::HANN}),
-          decimateGain({.nBands = 2 * c.bufferSize + 1}), filterbankSynthesis({.bufferSize = c.bufferSize,
-                                                                               .nBands = 2 * c.bufferSize + 1,
-                                                                               .nFilterbanks = nFilterbanks,
-                                                                               .filterbankType = FilterbankSetSynthesisConfiguration::Coefficients::HANN}),
+          filterbankAnalysis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = nFilterbanks, .nFolds = 1}),
+          decimateGain({.nBands = 2 * c.bufferSize + 1}),
+          filterbankSynthesis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = nFilterbanks, .nFolds = 1}),
           audioCombineMax({.bufferSize = bufferSizeSmall, .nChannels = nFilterbanks})
 
     {

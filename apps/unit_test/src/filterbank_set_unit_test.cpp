@@ -17,7 +17,7 @@ TEST(FilterbankSetAnalysis, InterfaceWOLA)
 {
     FilterbankSetAnalysisWOLA algo;
     auto c = algo.getCoefficients();
-    c.filterbankType = c.WOLA;
+    c.nFolds = 2; // set filterbankType to WOLA
     EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<FilterbankSetAnalysisWOLA>(c));
 }
 
@@ -48,7 +48,7 @@ TEST(FilterbankSetAnalysis, Reconstruction)
         delays[i] = static_cast<int>(std::round(filterbank.filterbanks[i].getDelaySamples())) * 2 - c.bufferSize / positivePow2(i);
         Eigen::ArrayXf outputDelayCompensated = output.col(i).segment(delays[i], nSamples - delays[0]);
         float error = (outputDelayCompensated.head(nSamples - delays[0]) - input.head(nSamples - delays[0])).abs2().mean();
-        fmt::print("Error {}: {}\n", i, error);
+        fmt::print("Filterbank {} with delay: {} and Error: {}\n", i, delays[i], error);
         EXPECT_TRUE(error < 1e-10f);
     }
 }

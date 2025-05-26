@@ -35,8 +35,8 @@ class SpectrogramFilterbank : public AlgorithmImplementation<SpectrogramConfigur
         switch (c.algorithmType)
         {
         default: // Hann is the default case
-        case Coefficients::HANN: cFilterbank.filterbankType = cFilterbank.HANN; break;
-        case Coefficients::WOLA: cFilterbank.filterbankType = cFilterbank.WOLA; break;
+        case Coefficients::HANN: cFilterbank.nFolds = 1; break;
+        case Coefficients::WOLA: cFilterbank.nFolds = 2; break;
         }
         return cFilterbank;
     }

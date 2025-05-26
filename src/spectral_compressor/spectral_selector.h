@@ -41,14 +41,12 @@ class SpectralSelector : public AlgorithmImplementation<SpectralSelectorConfigur
 {
   public:
     SpectralSelector(Coefficients c = Coefficients())
-        : BaseAlgorithm{c}, filterbank({.nChannels = c.nChannels,
-                                        .bufferSize = c.bufferSize,
-                                        .nBands = FFTConfiguration::convertFFTSizeToNBands(c.bufferSize * 4),
-                                        .filterbankType = FilterbankAnalysisWOLA::Coefficients::HANN}),
+        : BaseAlgorithm{c},
+          filterbank({.nChannels = c.nChannels, .bufferSize = c.bufferSize, .nBands = FFTConfiguration::convertFFTSizeToNBands(c.bufferSize * 4), .nFolds = 1}),
           filterbankInverse({.nChannels = Configuration::getNOutputChannels(c),
                              .bufferSize = c.bufferSize,
                              .nBands = FFTConfiguration::convertFFTSizeToNBands(c.bufferSize * 4),
-                             .filterbankType = FilterbankSynthesisWOLA::Coefficients::HANN})
+                             .nFolds = 1})
     {
         nBands = FFTConfiguration::convertFFTSizeToNBands(c.bufferSize * 4);
         nOutputChannels = Configuration::getNOutputChannels(c);

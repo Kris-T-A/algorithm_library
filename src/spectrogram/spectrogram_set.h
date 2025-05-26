@@ -55,8 +55,7 @@ class SpectrogramSet : public AlgorithmImplementation<SpectrogramConfiguration, 
         cFilterbank.bufferSize = c.bufferSize;
         cFilterbank.nBands = c.nBands;
         cFilterbank.nFilterbanks = nFilterbanks;
-        cFilterbank.filterbankType =
-            (c.algorithmType == Coefficients::ADAPTIVE_WOLA_8) ? FilterbankSetAnalysisWOLA::Coefficients::WOLA : FilterbankSetAnalysisWOLA::Coefficients::HANN;
+        cFilterbank.nFolds = (c.algorithmType == Coefficients::ADAPTIVE_WOLA_8) ? 2 : 1;
         return cFilterbank;
     }
 
