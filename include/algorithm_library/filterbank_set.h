@@ -1,6 +1,5 @@
 #pragma once
 #include "algorithm_library/fft.h"
-#include "algorithm_library/filterbank.h"
 #include "interface/interface.h"
 
 // A set of analysis filter banks supporting 1 channel input
