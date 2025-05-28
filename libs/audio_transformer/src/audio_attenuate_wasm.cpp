@@ -1,5 +1,5 @@
 #include "audio_attenuate/audio_attenuate_adaptive.h"
-#include "spectrogram/spectrogram_set.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 #include <emscripten/bind.h>
 #include <nmmintrin.h>
 
@@ -24,13 +24,15 @@ extern "C"
         if (bufferSize <= 0 || nBuffers <= 0) { return; }
 
         // Create default configuration
-        SpectrogramConfiguration::Coefficients c;
+        SpectrogramAdaptiveConfiguration::Coefficients c;
         c.bufferSize = bufferSize;
         c.nBands = 2 * bufferSize + 1;
-        c.algorithmType = SpectrogramConfiguration::Coefficients::ADAPTIVE_HANN_8;
+        c.nFolds = 2;
+        c.nonlinearity = 6;
+        c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create instance of SpectrogramSet
-        SpectrogramSet spectrogram(c);
+        SpectrogramAdaptiveWOLA spectrogram(c);
 
         // derived values
         const int length = bufferSize * nBuffers;         // total length of input in samples. It is callers responsibility to ensure that input is at least this long
