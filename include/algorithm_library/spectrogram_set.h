@@ -53,7 +53,7 @@ struct SpectrogramSetConfiguration
             int fftSize = FFTConfiguration::convertNBandsToFFTSize(c.nBands) / nFrames;
             if (!FFTConfiguration::isFFTSizeValid(fftSize)) { return false; }
             int nBands = FFTConfiguration::convertFFTSizeToNBands(fftSize);
-            if ((output[i].rows() != nBands) || (output[i].cols() != nFrames) || (!output[i].allFinite())) { return false; }
+            if ((output[i].rows() != nBands) || (output[i].cols() != nFrames) || (!output[i].allFinite()) || !((output[i] >= 0).all())) { return false; }
         }
         return true;
     }

@@ -1,4 +1,4 @@
-#include "spectrogram/upscale2d_linear.h"
+#include "spectrogram_adaptive/upscale2d_linear.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
 #include <iostream>
