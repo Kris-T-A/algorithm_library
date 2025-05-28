@@ -20,7 +20,9 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
         spectrogramRaw.resize(spectrogramOut.size());
         for (auto i = 0; i < static_cast<int>(spectrogramOut.size()); i++)
         {
-            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), positivePow2(i + 1)); // +1 to keep the last previous frame
+            int nCols = positivePow2(i + 1) + positivePow2(i)-1;
+            if (c.nFolds == 2) { nCols +=  positivePow2(i+1)-2; } // TODO: fix this properly, also for nFolds > 2
+            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols); 
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
 
@@ -49,9 +51,12 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
         upscale[0].process(spectrogramRaw[0], output);
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
-            spectrogramRaw[iFB].leftCols(1 << iFB) = spectrogramRaw[iFB].rightCols(1 << iFB); // copy prevous frames
-            spectrogramRaw[iFB].rightCols(spectrogramOut[iFB].cols()) = spectrogramOut[iFB];
-            upscale[iFB].process(spectrogramRaw[iFB].leftCols(spectrogramOut[iFB].cols() + 1), spectrogramUpscaled);
+            const int newCols = spectrogramOut[iFB].cols();
+            const int currentCols = spectrogramRaw[iFB].cols();
+            const int shiftCols = currentCols - newCols;
+            spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols); // copy prevous frames
+            spectrogramRaw[iFB].rightCols(newCols) = spectrogramOut[iFB];
+            upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
             output = output.min(spectrogramUpscaled);
         }
     }
