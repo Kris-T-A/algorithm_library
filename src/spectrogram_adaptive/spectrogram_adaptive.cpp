@@ -1,3 +1,4 @@
+#include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 
 DEFINE_ALGORITHM_CONSTRUCTOR(SpectrogramAdaptive, SpectrogramAdaptiveWOLA, SpectrogramAdaptiveConfiguration)
