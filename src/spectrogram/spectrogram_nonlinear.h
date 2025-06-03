@@ -18,10 +18,13 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
                                 {.nChannels = 1, .bufferSize = c.bufferSize, .nBands = c.nBands, .nFolds = c.nFolds})
     {
         assert(c.nonlinearity >= 0);
+
         filterbankOut.resize(c.nBands);
 
         if (c.nonlinearity > 0)
         {
+            nonlinearOld.resize(c.nBands); // used to store the output of the nonlinear combination for the next iteration
+
             // set windows
             const int stride = positivePow2(c.nonlinearity);
             const int frameSize = filterbanks[0].getFrameSize();
@@ -31,17 +34,25 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
 
             Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Map(window.data(), frameSizeSmall, Eigen::InnerStride<>(stride));
 
+            // assymetric window on left side
             window.head((frameSize - frameSizeSmall) / 2).setZero();
             window.segment((frameSize - frameSizeSmall) / 2, frameSizeSmall / 2) = windowSmall.head(frameSizeSmall / 2);
             window *= std::sqrt(winScale / window.abs2().sum());
             filterbanks[1].setWindow(window);
 
+            // assymetric window on right side shifted with bufferSize
             window = filterbanks[0].getWindow();
-            window.tail((frameSize - frameSizeSmall) / 2).setZero();
-            window.segment((frameSize + frameSizeSmall) / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
+            int shift = std::max(0, (frameSize - frameSizeSmall) / 2 - c.bufferSize);
+            window.tail(shift).setZero();
+            window.segment(frameSize - shift - frameSizeSmall / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
+            window.segment((frameSize - frameSizeSmall) / 2 - shift, frameSize / 2) = window.head(frameSize / 2);
+            window.head((frameSize - frameSizeSmall) / 2 - shift).setZero();
             window *= std::sqrt(winScale / window.abs2().sum());
             filterbanks[2].setWindow(window);
         }
+        else { nonlinearOld.resize(0); }
+
+        resetVariables();
     }
 
     VectorAlgo<FilterbankAnalysisSingleChannel> filterbanks;
@@ -50,22 +61,37 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
   private:
     void inline processAlgorithm(Input input, Output output)
     {
-        filterbanks[0].process(input, filterbankOut);
-        output = filterbankOut.abs2();
-        for (auto iFilterbank = 1; iFilterbank < static_cast<int>(filterbanks.size()); iFilterbank++)
+        if (C.nonlinearity > 0)
         {
-            filterbanks[iFilterbank].process(input, filterbankOut);
+            output = nonlinearOld; // start with the previous nonlinear output
+            // process the nonlinear filterbanks to get the minimum power and store in nonlinearOld
+            filterbanks[1].process(input, filterbankOut);
+            nonlinearOld = filterbankOut.abs2();
+            filterbanks[2].process(input, filterbankOut);
+            nonlinearOld = nonlinearOld.min(filterbankOut.abs2());
+            output = output.min(nonlinearOld); // update output with the minimum power from the nonlinear filterbanks
+            // process linear filterbank and update output with the minimum power
+            filterbanks[0].process(input, filterbankOut);
             output = output.min(filterbankOut.abs2());
+        }
+        else // only process linear filterbank
+        {
+            filterbanks[0].process(input, filterbankOut);
+            output = filterbankOut.abs2();
         }
     }
 
     size_t getDynamicSizeVariables() const final
     {
         size_t size = filterbankOut.getDynamicMemorySize();
+        size += nonlinearOld.getDynamicMemorySize(); // memory for the nonlinear output
         return size;
     }
 
+    void resetVariables() final { nonlinearOld.setZero(); }
+
     Eigen::ArrayXcf filterbankOut;
+    Eigen::ArrayXf nonlinearOld; // used to store the output of the nonlinear combination for the next iteration
 
     friend BaseAlgorithm;
 };
