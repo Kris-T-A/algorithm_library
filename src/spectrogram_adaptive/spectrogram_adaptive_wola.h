@@ -12,29 +12,33 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
   public:
     SpectrogramAdaptiveWOLA(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
-          spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity})
+          spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+          upscale([&c]() {
+              std::vector<Upscale2DLinear::Coefficients> cUpscale(c.nSpectrograms);
+              for (auto i = 0; i < c.nSpectrograms; i++)
+              {
+                  cUpscale[i].factorHorizontal = positivePow2(c.nSpectrograms - 1 - i);
+                  cUpscale[i].factorVertical = positivePow2(i);
+                  cUpscale[i].leftBoundaryExcluded = true;
+              }
+              return cUpscale;
+          }())
     {
         nOutputFrames = positivePow2(c.nSpectrograms - 1); // 2^(nSpectrograms-1) frames
         Eigen::ArrayXf inputFrame(c.bufferSize);
         spectrogramOut = spectrogramSet.initOutput(inputFrame);
-        spectrogramRaw.resize(spectrogramOut.size());
-        for (auto i = 0; i < static_cast<int>(spectrogramOut.size()); i++)
+
+        spectrogramRaw.resize(c.nSpectrograms);
+        spectrogramRaw[0] = Eigen::ArrayXXf::Zero(spectrogramOut[0].rows(), 2);          // first spectrogram has 2 columns (current and previous frame)
+        int delayRef = spectrogramSet.spectrograms[0].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
+        for (auto i = 1; i < c.nSpectrograms; i++)
         {
-            int nCols = positivePow2(i + 1) + positivePow2(i)-1;
-            if (c.nFolds == 2) { nCols +=  positivePow2(i+1)-2; } // TODO: fix this properly, also for nFolds > 2
-            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols); 
+            int bufferSize = c.bufferSize / positivePow2(i);
+            int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
+            int nCols = 2 + (delayRef - delay) / bufferSize;                              // 2 columns for current and previous frame, plus additional columns for the delay
+            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
-
-        auto cUpscale = upscale.getCoefficients();
-        cUpscale.resize(c.nSpectrograms);
-        for (auto i = 0; i < c.nSpectrograms; i++)
-        {
-            cUpscale[i].factorHorizontal = positivePow2(c.nSpectrograms - 1 - i);
-            cUpscale[i].factorVertical = positivePow2(i);
-            cUpscale[i].leftBoundaryExcluded = true;
-        }
-        upscale.setCoefficients(cUpscale);
     }
 
     SpectrogramSetWOLA spectrogramSet;
@@ -46,16 +50,17 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
     {
         spectrogramSet.process(input, spectrogramOut);
 
-        spectrogramRaw[0].col(0) = spectrogramRaw[0].col(1); // copy prevous frame
-        spectrogramRaw[0].col(1) = spectrogramOut[0];
+        spectrogramRaw[0].col(0) = spectrogramRaw[0].col(1);                     // copy prevous frame
+        spectrogramRaw[0].col(1) = 10.f * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
         upscale[0].process(spectrogramRaw[0], output);
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
             const int newCols = spectrogramOut[iFB].cols();
             const int currentCols = spectrogramRaw[iFB].cols();
             const int shiftCols = currentCols - newCols;
-            spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols); // copy prevous frames
-            spectrogramRaw[iFB].rightCols(newCols) = spectrogramOut[iFB];
+            assert(shiftCols > 0);
+            spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols);      // copy prevous frames
+            spectrogramRaw[iFB].rightCols(newCols) = 10.f * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
             upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
             output = output.min(spectrogramUpscaled);
         }

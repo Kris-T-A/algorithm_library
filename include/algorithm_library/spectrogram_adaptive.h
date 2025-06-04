@@ -9,7 +9,7 @@
 struct SpectrogramAdaptiveConfiguration
 {
     using Input = I::Real;
-    using Output = O::Real2D;
+    using Output = O::Real2D; // output is in dB
 
     struct Coefficients
     {
@@ -28,13 +28,16 @@ struct SpectrogramAdaptiveConfiguration
 
     static Eigen::ArrayXf initInput(const Coefficients &c) { return Eigen::ArrayXf::Random(c.bufferSize); } // time domain signal
 
-    static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c) { return Eigen::ArrayXXf::Zero(c.nBands, 1 << (c.nSpectrograms - 1)); } // output power spectrogram
+    static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c)
+    {
+        return Eigen::ArrayXXf::Constant(c.nBands, 1 << (c.nSpectrograms - 1), -200);
+    } // output spectrogram in dB
 
     static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && input.allFinite(); }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        return ((output.rows() == c.nBands) && (output.cols() == (1 << (c.nSpectrograms - 1))) && output.allFinite() && (output >= 0).all());
+        return ((output.rows() == c.nBands) && (output.cols() == (1 << (c.nSpectrograms - 1))) && output.allFinite());
     }
 };
 

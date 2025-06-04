@@ -64,6 +64,7 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
             for (auto iSG = 0; iSG < static_cast<int>(spectrograms.size()); iSG++)
             {
                 spectrograms[iSG].process(input.segment(iFrame * frameSize, frameSize), spectrogramOut);
+                spectrogramOut = 10.f * spectrogramOut.max(1e-20f).log10(); // convert to dB
                 output.col(iFrame) = output.col(iFrame).min(spectrogramOut);
             }
         }
