@@ -27,8 +27,8 @@ extern "C"
         SpectrogramAdaptiveConfiguration::Coefficients c;
         c.bufferSize = bufferSize;
         c.nBands = 2 * bufferSize + 1;
-        c.nFolds = 2;
-        c.nonlinearity = 6;
+        c.nFolds = 1;
+        c.nonlinearity = 1;
         c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create instance of SpectrogramSet
