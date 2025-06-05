@@ -38,16 +38,23 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
             window.head((frameSize - frameSizeSmall) / 2).setZero();
             window.segment((frameSize - frameSizeSmall) / 2, frameSizeSmall / 2) = windowSmall.head(frameSizeSmall / 2);
             window *= winScale / window.abs2().sum();
+            Eigen::ArrayXf temp(window.size());
+            temp.head(frameSize - c.bufferSize) = window.tail(frameSize - c.bufferSize);
+            temp.tail(c.bufferSize).setZero();
+            window = temp;
             filterbanks[1].setWindow(window);
 
             // assymetric window on right side shifted with bufferSize
             window = filterbanks[0].getWindow();
-            int shift = std::max(0, (frameSize - frameSizeSmall) / 2 - c.bufferSize);
+            int shift = std::max(0, (frameSize - frameSizeSmall) / 2);
             window.tail(shift).setZero();
             window.segment(frameSize - shift - frameSizeSmall / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
             window.segment((frameSize - frameSizeSmall) / 2 - shift, frameSize / 2) = window.head(frameSize / 2);
             window.head((frameSize - frameSizeSmall) / 2 - shift).setZero();
             window *= winScale / window.abs2().sum();
+            temp.tail(frameSize-c.bufferSize) = window.head(frameSize-c.bufferSize);
+            temp.head(c.bufferSize).setZero();
+            window = temp;
             filterbanks[2].setWindow(window);
         }
         else { nonlinearOld.resize(0); }
@@ -63,7 +70,7 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
     {
         if (C.nonlinearity > 0)
         {
-            output = nonlinearOld; // start with the previous nonlinear output
+            output.setConstant(200);// = nonlinearOld; // start with the previous nonlinear output
             // process the nonlinear filterbanks to get the minimum power and store in nonlinearOld
             filterbanks[1].process(input, filterbankOut);
             nonlinearOld = filterbankOut.abs2();
