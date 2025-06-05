@@ -37,15 +37,15 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
         window.segment(length / 2, lengthSmall / 2) =
             windowSmall.segment(lengthSmall / 2, lengthSmall / 2); // copy the last half of the small window to the middle of the large window
         window.tail((length - lengthSmall) / 2).setZero();         // zero out the last half of the large window
-        window *= std::sqrt(winScale / window.abs2().sum());       // scale the large window to have the same energy as the small window
+        window *= winScale / window.abs2().sum();                  // scale the large window to have the same energy as the small window
         spectrograms[0].filterbank.setWindow(window);
 
         // set first half of the second spectrogram's window to the first half of the small window
         window = spectrograms[1].filterbank.getWindow();
         window.segment((length - lengthSmall) / 2, lengthSmall / 2) =
-            windowSmall.head(lengthSmall / 2);               // copy the first half of the small window to the middle of the large window
-        window.head((length - lengthSmall) / 2).setZero();   // zero out the first half of the large window
-        window *= std::sqrt(winScale / window.abs2().sum()); // scale the large window to have the same energy as the small window
+            windowSmall.head(lengthSmall / 2);             // copy the first half of the small window to the middle of the large window
+        window.head((length - lengthSmall) / 2).setZero(); // zero out the first half of the large window
+        window *= winScale / window.abs2().sum();          // scale the large window to have the same energy as the small window
         spectrograms[1].filterbank.setWindow(window);
     }
 

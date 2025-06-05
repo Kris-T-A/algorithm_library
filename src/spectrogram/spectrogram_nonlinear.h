@@ -37,7 +37,7 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
             // assymetric window on left side
             window.head((frameSize - frameSizeSmall) / 2).setZero();
             window.segment((frameSize - frameSizeSmall) / 2, frameSizeSmall / 2) = windowSmall.head(frameSizeSmall / 2);
-            window *= std::sqrt(winScale / window.abs2().sum());
+            window *= winScale / window.abs2().sum();
             filterbanks[1].setWindow(window);
 
             // assymetric window on right side shifted with bufferSize
@@ -47,7 +47,7 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
             window.segment(frameSize - shift - frameSizeSmall / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
             window.segment((frameSize - frameSizeSmall) / 2 - shift, frameSize / 2) = window.head(frameSize / 2);
             window.head((frameSize - frameSizeSmall) / 2 - shift).setZero();
-            window *= std::sqrt(winScale / window.abs2().sum());
+            window *= winScale / window.abs2().sum();
             filterbanks[2].setWindow(window);
         }
         else { nonlinearOld.resize(0); }

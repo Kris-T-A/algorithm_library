@@ -19,7 +19,7 @@ class FilterbankSetAnalysisWOLA : public AlgorithmImplementation<FilterbankSetAn
             nBuffers[i] = nBuffers[i - 1] * 2;
             bufferSizes[i] = bufferSizes[i - 1] / 2;
             Eigen::ArrayXf window = filterbanks[i].getWindow();
-            window *= std::sqrt(winScale / window.abs2().sum()); // scale the window to have the same energy as the first filterbank
+            window *= winScale / window.abs2().sum(); // scale the window to have the same max value as the first filterbank
             filterbanks[i].setWindow(window);
         }
     }
@@ -148,7 +148,7 @@ class FilterbankSetSynthesisWOLA : public AlgorithmImplementation<FilterbankSetS
             bufferSizes[i] = bufferSizes[i - 1] / 2;
             Eigen::ArrayXf window = inverseFilterbanks[i].getWindow();
             // calculate inverse scale factor of the analysis filterbank to ensure perfect reconstruction
-            window *= std::sqrt(FilterbankShared::getAnalysisWindow(inverseFilterbanks[i].getCoefficients()).abs2().sum() / winScale);
+            window *= FilterbankShared::getAnalysisWindow(inverseFilterbanks[i].getCoefficients()).abs2().sum() / winScale;
             inverseFilterbanks[i].setWindow(window);
         }
     }

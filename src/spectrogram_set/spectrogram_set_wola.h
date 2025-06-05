@@ -37,7 +37,7 @@ class SpectrogramSetWOLA : public AlgorithmImplementation<SpectrogramSetConfigur
             for (auto iFB = 0; iFB < static_cast<int>(spectrograms[iSG].filterbanks.size()); iFB++)
             {
                 Eigen::ArrayXf window = spectrograms[iSG].filterbanks[iFB].getWindow();
-                window *= std::sqrt(winScale / window.abs2().sum()); // scale the window to have the same energy as the first filterbank
+                window *= winScale / window.abs2().sum(); // scale the window to have the same energy as the first filterbank
                 spectrograms[iSG].filterbanks[iFB].setWindow(window);
             }
         }
