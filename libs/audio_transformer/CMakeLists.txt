@@ -76,6 +76,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                 -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
                 -s EXPORTED_FUNCTIONS=['_audio_attenuate','_malloc','_free'] \
                 -s NO_EXIT_RUNTIME=1 \
+                -s INITIAL_MEMORY=64MB \
+                -s MAXIMUM_MEMORY=512MB \
+                -s ALLOW_MEMORY_GROWTH=1 \
                 --closure 1"
 )
 
