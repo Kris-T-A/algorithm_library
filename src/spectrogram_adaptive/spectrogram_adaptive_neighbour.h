@@ -70,24 +70,100 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
             spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols);      // copy prevous frames
             spectrogramRaw[iFB].rightCols(newCols) = 10.f * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
 
-            Eigen::Map<Eigen::ArrayXXf> spec(spectrogramRaw[iFB].col(1).data(), spectrogramRaw[iFB].rows(), newCols); // spectrogramRaw[iFB].middleCols(1, newCols)
-            for (int iCols = 0; iCols < newCols; iCols++)
+            const int nRows = spectrogramRaw[iFB].rows();
+            Eigen::Map<Eigen::ArrayXXf> spec(spectrogramRaw[iFB].col(1).data(), nRows, newCols); // spectrogramRaw[iFB].middleCols(1, newCols)
+            // first column is previous frame so start counting from index 1
+            for (int iCols = 1; iCols < newCols + 1; iCols++)
             {
-                float maxV = -200.f;
-                int maxI = 0;
-                bool upWards = true;
-                for (auto iRow = 0; iRow < spectrogramRaw[iFB].rows(); iRow++)
+
+                Eigen::ArrayXf prevSpec(nRows);
+                for (int iRow = 0; iRow < spectrogramRaw[iFB + 1].rows() - 1; iRow++)
                 {
-                    if (spectrogramRaw[iFB](iRow, iCols) > maxV)
+                    prevSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, iCols - 1);                                                            // copy previous frame
+                    prevSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, iCols - 1) + spectrogramRaw[iFB + 1](iRow + 1, iCols - 1)); // average with next frame
+                }
+                prevSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, iCols - 1);
+
+                Eigen::ArrayXf nextSpec(nRows);
+                for (int iRow = 0; iRow < spectrogramRaw[iFB + 1].rows() - 1; iRow++)
+                {
+                    nextSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, iCols + 1);                                                            // copy previous frame
+                    nextSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, iCols + 1) + spectrogramRaw[iFB + 1](iRow + 1, iCols + 1)); // average with next frame
+                }
+                nextSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, iCols + 1);
+
+                int extremumI = 0;
+                float extremumV = spectrogramRaw[iFB](extremumI, iCols);
+                bool upWards = true;
+                float specOld = extremumV;
+
+                for (auto iRow = 1; iRow < nRows; iRow++)
+                {
+                    const float specCurrent = spectrogramRaw[iFB](iRow, iCols);
+                    if (specCurrent > specOld)
                     {
                         if (!upWards)
                         {
-                            float maxS =
-                                spectrogramUpscaled(maxI * newCols, iCols * 8 / newCols + 1); // current value in upscaled current spectrogram. NOT the prevous spectrogram
+                            if (nextSpec(extremumI) > extremumV && nextSpec(extremumI) > prevSpec(extremumI))
+                            {
+                                spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI) =
+                                    spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI).min(nextSpec.segment(extremumI, iRow - extremumI));
+                            }
+                            else if (prevSpec(extremumI) > extremumV)
+                            {
+                                spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI) =
+                                    spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI).min(prevSpec.segment(extremumI, iRow - extremumI));
+                            }
                             upWards = true;
+                            extremumV = specOld;
+                            extremumI = iRow - 1;
                         }
-                        maxV = spectrogramRaw[iFB](iRow, iCols);
-                        maxI = iRow;
+                    }
+                    else if (specCurrent < specOld)
+                    {
+                        if (upWards)
+                        {
+                            if (nextSpec(iRow - 1) > specOld && nextSpec(iRow - 1) > prevSpec(iRow - 1))
+                            {
+                                spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI) =
+                                    spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI).min(nextSpec.segment(extremumI, iRow - extremumI));
+                            }
+                            else if (prevSpec(iRow - 1) > specOld)
+                            {
+                                spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI) =
+                                    spectrogramRaw[iFB].col(iCols).segment(extremumI, iRow - extremumI).min(prevSpec.segment(extremumI, iRow - extremumI));
+                            }
+                            upWards = false;
+                            extremumV = specOld;
+                            extremumI = iRow - 1;
+                        }
+                    }
+                    specOld = specCurrent;
+                }
+                if (upWards)
+                {
+                    if (nextSpec(nRows - 1) > specOld && nextSpec(nRows - 1) > prevSpec(nRows - 1))
+                    {
+                        spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI) =
+                            spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI).min(nextSpec.segment(extremumI, nRows - extremumI));
+                    }
+                    else if (prevSpec(nRows - 1) > specOld)
+                    {
+                        spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI) =
+                            spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI).min(prevSpec.segment(extremumI, nRows - extremumI));
+                    }
+                }
+                else
+                {
+                    if (nextSpec(extremumI) > extremumV && nextSpec(extremumI) > prevSpec(extremumI))
+                    {
+                        spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI) =
+                            spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI).min(nextSpec.segment(extremumI, nRows - extremumI));
+                    }
+                    else if (prevSpec(extremumI) > extremumV)
+                    {
+                        spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI) =
+                            spectrogramRaw[iFB].col(iCols).segment(extremumI, nRows - extremumI).min(prevSpec.segment(extremumI, nRows - extremumI));
                     }
                 }
             }
@@ -95,6 +171,7 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
             upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
             output = output.min(spectrogramUpscaled);
         }
+
         // output += lin2dB(std::min(10.f,scale));
     }
 
