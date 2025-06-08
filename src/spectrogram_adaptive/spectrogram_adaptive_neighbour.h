@@ -71,7 +71,6 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
             spectrogramRaw[iFB].rightCols(newCols) = 10.f * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
 
             const int nRows = spectrogramRaw[iFB].rows();
-            Eigen::Map<Eigen::ArrayXXf> spec(spectrogramRaw[iFB].col(1).data(), nRows, newCols); // spectrogramRaw[iFB].middleCols(1, newCols)
             // first column is previous frame so start counting from index 1
             for (int iCols = 1; iCols < newCols + 1; iCols++)
             {
@@ -79,18 +78,18 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
                 Eigen::ArrayXf prevSpec(nRows);
                 for (int iRow = 0; iRow < spectrogramRaw[iFB + 1].rows() - 1; iRow++)
                 {
-                    prevSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, iCols - 1);                                                            // copy previous frame
-                    prevSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, iCols - 1) + spectrogramRaw[iFB + 1](iRow + 1, iCols - 1)); // average with next frame
+                    prevSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, 2*iCols - 1);                                                            // copy previous frame
+                    prevSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, 2*iCols - 1) + spectrogramRaw[iFB + 1](iRow + 1, 2*iCols - 1)); // average with next frame
                 }
-                prevSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, iCols - 1);
+                prevSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, 2*iCols - 1);
 
                 Eigen::ArrayXf nextSpec(nRows);
                 for (int iRow = 0; iRow < spectrogramRaw[iFB + 1].rows() - 1; iRow++)
                 {
-                    nextSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, iCols + 1);                                                            // copy previous frame
-                    nextSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, iCols + 1) + spectrogramRaw[iFB + 1](iRow + 1, iCols + 1)); // average with next frame
+                    nextSpec(2 * iRow) = spectrogramRaw[iFB + 1](iRow, 2*iCols + 1);                                                            // copy previous frame
+                    nextSpec(2 * iRow + 1) = 0.5 * (spectrogramRaw[iFB + 1](iRow, 2*iCols + 1) + spectrogramRaw[iFB + 1](iRow + 1, 2*iCols + 1)); // average with next frame
                 }
-                nextSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, iCols + 1);
+                nextSpec(nRows - 1) = spectrogramRaw[iFB + 1](spectrogramRaw[iFB + 1].rows() - 1, 2*iCols + 1);
 
                 int extremumI = 0;
                 float extremumV = spectrogramRaw[iFB](extremumI, iCols);
