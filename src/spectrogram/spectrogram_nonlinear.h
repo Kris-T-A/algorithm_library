@@ -23,41 +23,27 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
 
         if (c.nonlinearity > 0)
         {
-            nonlinearOld.resize(c.nBands); // used to store the output of the nonlinear combination for the next iteration
-
             // set windows
             const int stride = positivePow2(c.nonlinearity);
             const int frameSize = filterbanks[0].getFrameSize();
             const int frameSizeSmall = frameSize / stride;
             Eigen::ArrayXf window = filterbanks[0].getWindow();
-            const float winScale = window.abs2().sum();
-
+            const float winScale = window.sum();
             Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Map(window.data(), frameSizeSmall, Eigen::InnerStride<>(stride));
 
             // assymetric window on left side
             window.head((frameSize - frameSizeSmall) / 2).setZero();
             window.segment((frameSize - frameSizeSmall) / 2, frameSizeSmall / 2) = windowSmall.head(frameSizeSmall / 2);
-            window *= winScale / window.abs2().sum();
-            Eigen::ArrayXf temp(window.size());
-            temp.head(frameSize - c.bufferSize) = window.tail(frameSize - c.bufferSize);
-            temp.tail(c.bufferSize).setZero();
-            window = temp;
+            window *= winScale / window.sum();
             filterbanks[1].setWindow(window);
 
-            // assymetric window on right side shifted with bufferSize
+            // assymetric window on right side
             window = filterbanks[0].getWindow();
-            int shift = std::max(0, (frameSize - frameSizeSmall) / 2);
-            window.tail(shift).setZero();
-            window.segment(frameSize - shift - frameSizeSmall / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
-            window.segment((frameSize - frameSizeSmall) / 2 - shift, frameSize / 2) = window.head(frameSize / 2);
-            window.head((frameSize - frameSizeSmall) / 2 - shift).setZero();
-            window *= winScale / window.abs2().sum();
-            temp.tail(frameSize-c.bufferSize) = window.head(frameSize-c.bufferSize);
-            temp.head(c.bufferSize).setZero();
-            window = temp;
+            window.tail((frameSize - frameSizeSmall) / 2).setZero();
+            window.segment(frameSize / 2, frameSizeSmall / 2) = windowSmall.tail(frameSizeSmall / 2);
+            window *= winScale / window.sum();
             filterbanks[2].setWindow(window);
         }
-        else { nonlinearOld.resize(0); }
 
         resetVariables();
     }
@@ -68,37 +54,25 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
   private:
     void inline processAlgorithm(Input input, Output output)
     {
-        if (C.nonlinearity > 0)
+        // process linear filterbank and update output with the minimum power
+        filterbanks[0].process(input, filterbankOut);
+        output = filterbankOut.abs2();
+        if (C.nonlinearity > 0) // process non linear filterbanks
         {
-            output.setConstant(200);// = nonlinearOld; // start with the previous nonlinear output
-            // process the nonlinear filterbanks to get the minimum power and store in nonlinearOld
             filterbanks[1].process(input, filterbankOut);
-            nonlinearOld = filterbankOut.abs2();
-            filterbanks[2].process(input, filterbankOut);
-            nonlinearOld = nonlinearOld.min(filterbankOut.abs2());
-            output = output.min(nonlinearOld); // update output with the minimum power from the nonlinear filterbanks
-            // process linear filterbank and update output with the minimum power
-            filterbanks[0].process(input, filterbankOut);
             output = output.min(filterbankOut.abs2());
-        }
-        else // only process linear filterbank
-        {
-            filterbanks[0].process(input, filterbankOut);
-            output = filterbankOut.abs2();
+            filterbanks[2].process(input, filterbankOut);
+            output = output.min(filterbankOut.abs2());
         }
     }
 
     size_t getDynamicSizeVariables() const final
     {
         size_t size = filterbankOut.getDynamicMemorySize();
-        size += nonlinearOld.getDynamicMemorySize(); // memory for the nonlinear output
         return size;
     }
 
-    void resetVariables() final { nonlinearOld.setZero(); }
-
     Eigen::ArrayXcf filterbankOut;
-    Eigen::ArrayXf nonlinearOld; // used to store the output of the nonlinear combination for the next iteration
 
     friend BaseAlgorithm;
 };
