@@ -29,7 +29,7 @@ class SpectrogramSetWOLA : public AlgorithmImplementation<SpectrogramSetConfigur
         bufferSizes.resize(C.nSpectrograms);
         nBuffers[0] = 1;
         bufferSizes[0] = C.bufferSize;
-        float winScale = spectrograms[0].filterbanks[0].getWindow().abs2().sum();
+        float winScale = spectrograms[0].filterbanks[0].getWindow().sum();
         for (auto iSG = 1; iSG < C.nSpectrograms; iSG++)
         {
             nBuffers[iSG] = nBuffers[iSG - 1] * 2;
@@ -37,7 +37,7 @@ class SpectrogramSetWOLA : public AlgorithmImplementation<SpectrogramSetConfigur
             for (auto iFB = 0; iFB < static_cast<int>(spectrograms[iSG].filterbanks.size()); iFB++)
             {
                 Eigen::ArrayXf window = spectrograms[iSG].filterbanks[iFB].getWindow();
-                window *= winScale / window.abs2().sum(); // scale the window to have the same max value as the first filterbank
+                window *= winScale / window.sum(); // scale the window to have the same DC value as the first filterbank
                 spectrograms[iSG].filterbanks[iFB].setWindow(window);
             }
         }
