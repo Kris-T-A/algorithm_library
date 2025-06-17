@@ -3,6 +3,7 @@
 #include "framework/framework.h"
 #include "spectrogram_adaptive/upscale2d_linear.h"
 #include "spectrogram_set/spectrogram_set_wola.h"
+#include "utilities/fastonebigheader.h"
 
 // Adaptive Spectrogram
 //
@@ -35,7 +36,7 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
         {
             int bufferSize = c.bufferSize / positivePow2(i);
             int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
-            int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i)-1;                              // 2 columns for current and previous frame, plus additional columns for the delay
+            int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1;        // 2 columns for current and previous frame, plus additional columns for the delay
             spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
