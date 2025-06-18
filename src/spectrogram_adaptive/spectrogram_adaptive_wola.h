@@ -40,6 +40,8 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
             spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
+
+        //oldGain = Eigen::ArrayXf::Zero(c.nBands);
     }
 
     SpectrogramSetWOLA spectrogramSet;
@@ -65,6 +67,31 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
             upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
             output = output.min(spectrogramUpscaled);
         }
+        // int nFB = C.nSpectrograms - 2; 
+        // int nRows = spectrogramRaw[nFB].rows();
+        // int nCols = spectrogramOut[nFB].cols()+1;
+        // Eigen::ArrayXXf maxValue(nRows,nCols);
+        // int upRow = positivePow2(C.nSpectrograms - 1 -nFB); // 1
+        // int upCol = positivePow2(nFB); // 8
+        // maxValue(0, 0) = oldGain.head(1 + upCol/2).maxCoeff();
+        // for (auto iBand = 1; iBand < nRows-1; iBand++)
+        // {
+        //     maxValue(iBand, 0) = oldGain.segment(1+upCol/2+(iBand-1)*upCol, upCol).maxCoeff();
+        // }
+        // maxValue(nRows-1, 0) = oldGain.tail(1+upCol/2).maxCoeff();
+        // for (auto frame = 1; frame < nCols; frame++)
+        // {
+        //     maxValue(0, frame) = output.block(0, (frame-1)*upRow, 1 + upCol/2, upRow).maxCoeff();
+        //     for (auto iBand = 1; iBand < nRows-1; iBand++)
+        //     {
+        //         maxValue(iBand, frame) = output.block(1+upCol/2+(iBand-1)*upCol,  (frame-1)*upRow, upCol, upRow).maxCoeff();
+        //     }
+        //     maxValue(nRows-1, frame) = output.bottomRows(1 + upCol/2).middleCols((frame-1)*upRow, upRow).maxCoeff();
+        // }
+        // maxValue -= spectrogramRaw[nFB].leftCols(nCols);
+        // upscale[nFB].process(maxValue, spectrogramUpscaled);
+        // oldGain = output.col(nOutputFrames - 1);
+        // output -= spectrogramUpscaled;
     }
 
     size_t getDynamicSizeVariables() const final
@@ -83,6 +110,7 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
     std::vector<Eigen::ArrayXXf> spectrogramOut;
     std::vector<Eigen::ArrayXXf> spectrogramRaw;
     Eigen::ArrayXXf spectrogramUpscaled;
+    //Eigen::ArrayXf oldGain;
 
     friend BaseAlgorithm;
 };
