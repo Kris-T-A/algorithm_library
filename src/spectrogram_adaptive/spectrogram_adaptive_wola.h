@@ -40,13 +40,15 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
             spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
-
-        //oldGain = Eigen::ArrayXf::Zero(c.nBands);
+        //envelopeScale = Eigen::ArrayXXf::Zero(spectrogramOut[c.nSpectrograms - 1].rows(), 2);
+        oldGain = Eigen::ArrayXf::Zero(c.nBands);
     }
 
     SpectrogramSetWOLA spectrogramSet;
     VectorAlgo<Upscale2DLinear> upscale;
     DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale)
+    // Upscale2DLinear upscaleEnvelope;
+    //DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, upscaleEnvelope)
 
   private:
     void inline processAlgorithm(Input input, Output output)
@@ -54,7 +56,7 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
         spectrogramSet.process(input, spectrogramOut);
 
         spectrogramRaw[0].col(0) = spectrogramRaw[0].col(1);                     // copy prevous frame
-        spectrogramRaw[0].col(1) = 10.f * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
+        spectrogramRaw[0].col(1) = spectrogramOut[0]; // convert power to dB;
         upscale[0].process(spectrogramRaw[0], output);
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
@@ -63,35 +65,77 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
             const int shiftCols = currentCols - newCols;
             assert(shiftCols > 0);
             spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols);      // copy prevous frames
-            spectrogramRaw[iFB].rightCols(newCols) = 10.f * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
+            spectrogramRaw[iFB].rightCols(newCols) = spectrogramOut[iFB]; // convert power to dB
             upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
             output = output.min(spectrogramUpscaled);
         }
-        // int nFB = C.nSpectrograms - 2; 
-        // int nRows = spectrogramRaw[nFB].rows();
-        // int nCols = spectrogramOut[nFB].cols()+1;
-        // Eigen::ArrayXXf maxValue(nRows,nCols);
-        // int upRow = positivePow2(C.nSpectrograms - 1 -nFB); // 1
-        // int upCol = positivePow2(nFB); // 8
-        // maxValue(0, 0) = oldGain.head(1 + upCol/2).maxCoeff();
-        // for (auto iBand = 1; iBand < nRows-1; iBand++)
+        output = 10 * output.max(1e-20f).log10();
+
+        // // find max value in output
+        // Eigen::ArrayXf maxOutput = Eigen::ArrayXf::Constant(spectrogramOut[C.nSpectrograms - 1].rows(), -1000.f); // set to very low value in dB
+        // for (auto iFrame = 0; iFrame < nOutputFrames; iFrame++)
         // {
-        //     maxValue(iBand, 0) = oldGain.segment(1+upCol/2+(iBand-1)*upCol, upCol).maxCoeff();
-        // }
-        // maxValue(nRows-1, 0) = oldGain.tail(1+upCol/2).maxCoeff();
-        // for (auto frame = 1; frame < nCols; frame++)
-        // {
-        //     maxValue(0, frame) = output.block(0, (frame-1)*upRow, 1 + upCol/2, upRow).maxCoeff();
-        //     for (auto iBand = 1; iBand < nRows-1; iBand++)
+        //     maxOutput(0) = std::max(maxOutput(0), output.col(iFrame).head(1 + nOutputFrames / 2).maxCoeff());
+
+        //     for (auto iBand = 1; iBand < static_cast<int>(maxOutput.rows()) - 1; iBand++)
         //     {
-        //         maxValue(iBand, frame) = output.block(1+upCol/2+(iBand-1)*upCol,  (frame-1)*upRow, upCol, upRow).maxCoeff();
+        //         maxOutput(iBand) = std::max(maxOutput(iBand), output.col(iFrame).segment(1 + nOutputFrames / 2 + (iBand - 1) * nOutputFrames, nOutputFrames).maxCoeff());
         //     }
-        //     maxValue(nRows-1, frame) = output.bottomRows(1 + upCol/2).middleCols((frame-1)*upRow, upRow).maxCoeff();
+        //     maxOutput(maxOutput.rows() - 1) = std::max(maxOutput(maxOutput.rows() - 1), output.col(iFrame).tail(1 + nOutputFrames / 2).maxCoeff());
         // }
-        // maxValue -= spectrogramRaw[nFB].leftCols(nCols);
-        // upscale[nFB].process(maxValue, spectrogramUpscaled);
-        // oldGain = output.col(nOutputFrames - 1);
-        // output -= spectrogramUpscaled;
+        // // find max value in each spectrogramRaw and then find min between all spectrogramRaws
+        // Eigen::ArrayXf minSpectrogram = Eigen::ArrayXf::Constant(spectrogramRaw[C.nSpectrograms - 1].rows(), -1000.f); // set to very high value in dB
+        // for (auto iFB = 0; iFB < C.nSpectrograms; iFB++)
+        // {
+        //     int nVerticalFactor = positivePow2(C.nSpectrograms - 1 - iFB);
+        //     int nHorizontalFactor = positivePow2(iFB);
+        //     Eigen::ArrayXf maxSpectrogram = Eigen::ArrayXf::Constant(spectrogramRaw[C.nSpectrograms - 1].rows(), -1000.f); // set to very low value in dB
+        //     for (auto iFrame = 1; iFrame < nHorizontalFactor+1; iFrame++)
+        //     {
+        //         maxSpectrogram(0) = std::max(maxSpectrogram(0), spectrogramRaw[iFB].col(iFrame).head(1 + nVerticalFactor / 2).maxCoeff());
+        //         for (auto iBand = 1; iBand < static_cast<int>(maxSpectrogram.rows()) - 1; iBand++)
+        //         {
+        //             maxSpectrogram(iBand) = std::max(maxSpectrogram(iBand), spectrogramRaw[iFB].col(iFrame).segment(1 + nVerticalFactor / 2 + (iBand - 1) * nVerticalFactor, nVerticalFactor).maxCoeff());
+        //         }
+        //         maxSpectrogram(maxSpectrogram.rows() - 1) = std::max(maxSpectrogram(maxSpectrogram.rows() - 1), spectrogramRaw[iFB].col(iFrame).tail(1 + nVerticalFactor / 2).maxCoeff());
+        //     }
+        //     minSpectrogram = minSpectrogram.max(maxSpectrogram);
+        // }
+        // envelopeScale.col(0) = envelopeScale.col(1);
+        // envelopeScale.col(1) = minSpectrogram - maxOutput; // scale envelope to the difference between the minimum of the spectrograms and the maximum of the output
+        // Eigen::ArrayXXf envelopeUpscaled(output.rows(), output.cols());
+        // upscaleEnvelope.process(envelopeScale, envelopeUpscaled);
+
+        // // scale output with the envelope
+        // output = output + envelopeUpscaled;
+        
+        
+
+        int nFB = C.nSpectrograms -2; 
+        int nRows = spectrogramRaw[nFB].rows();
+        int nCols = spectrogramOut[nFB].cols()+1;
+        Eigen::ArrayXXf maxValue(nRows,nCols);
+        int upRow = positivePow2(C.nSpectrograms - 1 -nFB); // 1
+        int upCol = positivePow2(nFB); // 8
+        maxValue(0, 0) = oldGain.head(1 + upCol/2).maxCoeff();
+        for (auto iBand = 1; iBand < nRows-1; iBand++)
+        {
+            maxValue(iBand, 0) = oldGain.segment(1+upCol/2+(iBand-1)*upCol, upCol).maxCoeff();
+        }
+        maxValue(nRows-1, 0) = oldGain.tail(1+upCol/2).maxCoeff();
+        for (auto frame = 1; frame < nCols; frame++)
+        {
+            maxValue(0, frame) = output.block(0, (frame-1)*upRow, 1 + upCol/2, upRow).maxCoeff();
+            for (auto iBand = 1; iBand < nRows-1; iBand++)
+            {
+                maxValue(iBand, frame) = output.block(1+upCol/2+(iBand-1)*upCol,  (frame-1)*upRow, upCol, upRow).maxCoeff();
+            }
+            maxValue(nRows-1, frame) = output.bottomRows(1 + upCol/2).middleCols((frame-1)*upRow, upRow).maxCoeff();
+        }
+        maxValue -= 10 * spectrogramRaw[nFB].leftCols(nCols).max(1e-20f).log10(); // convert power to dB
+        upscale[nFB].process(maxValue, spectrogramUpscaled);
+        oldGain = output.col(nOutputFrames - 1);
+        output -= spectrogramUpscaled;
     }
 
     size_t getDynamicSizeVariables() const final
@@ -110,7 +154,8 @@ class SpectrogramAdaptiveWOLA : public AlgorithmImplementation<SpectrogramAdapti
     std::vector<Eigen::ArrayXXf> spectrogramOut;
     std::vector<Eigen::ArrayXXf> spectrogramRaw;
     Eigen::ArrayXXf spectrogramUpscaled;
-    //Eigen::ArrayXf oldGain;
+    //Eigen::ArrayXXf envelopeScale;
+    Eigen::ArrayXf oldGain;
 
     friend BaseAlgorithm;
 };
