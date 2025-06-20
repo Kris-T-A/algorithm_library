@@ -63,7 +63,7 @@ Eigen::ArrayXf getSynthesisWindow(const FilterbankConfiguration::Coefficients &c
     else
     {
         if ((fftSize / c.bufferSize) <= 2) { window = Eigen::ArrayXf::Ones(frameSize); }
-        window = hann(frameSize);
+        else { window = hann(frameSize); }
     }
 
     // scale synthesis window to give unit output
