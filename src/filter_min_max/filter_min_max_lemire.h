@@ -446,7 +446,6 @@ class FilterMaxLemire : public AlgorithmImplementation<FilterMaxConfiguration, F
         // This is the shifted streaming filter, which creates a symmetric window
         streaming.process(input.bottomRows(input.rows() - wHalf), output.topRows(input.rows() - wHalf));
         xEndHalf = input.bottomRows<1>().replicate(wHalf, 1);
-        ;
         streaming.process(xEndHalf, output.bottomRows(wHalf));
     }
 
