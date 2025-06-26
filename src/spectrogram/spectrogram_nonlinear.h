@@ -44,8 +44,6 @@ class SpectrogramNonlinear : public AlgorithmImplementation<SpectrogramConfigura
             window *= std::sqrt(winScale / window.abs2().sum());
             filterbanks[2].setWindow(window);
         }
-
-        resetVariables();
     }
 
     VectorAlgo<FilterbankAnalysisSingleChannel> filterbanks;
