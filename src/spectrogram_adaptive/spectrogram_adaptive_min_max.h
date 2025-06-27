@@ -86,8 +86,8 @@ class SpectrogramAdaptiveMinMax : public AlgorithmImplementation<SpectrogramAdap
         {
             filterMinLemire.process(spectrogramMinUpscaled.col(iFrame), minRange);
             filterMaxLemire.process(spectrogramMaxUpscaled.col(iFrame), maxRange);
-            minGlobal.col(iFrame) = minRange;
-            maxGlobal.col(iFrame) = maxRange;
+            minGlobal.col(iFrame) = spectrogramMinUpscaled.col(iFrame);
+            maxGlobal.col(iFrame) = spectrogramMaxUpscaled.col(iFrame);
             dynamicRange.col(iFrame) = maxRange - minRange; // calculate dynamic range
         }
 
