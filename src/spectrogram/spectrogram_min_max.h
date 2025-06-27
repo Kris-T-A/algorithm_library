@@ -9,7 +9,11 @@
 struct SpectrogramMinMaxConfiguration
 {
     using Input = I::Real;
-    using Output = O::Real2D;
+    struct Output
+    {
+        O::Real minPower;
+        O::Real maxPower;
+    };
 
     struct Coefficients
     {
@@ -26,11 +30,18 @@ struct SpectrogramMinMaxConfiguration
 
     static Eigen::ArrayXf initInput(const Coefficients &c) { return Eigen::ArrayXf::Random(c.bufferSize); } // time samples
 
-    static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c) { return Eigen::ArrayXXf::Zero(c.nBands, 2); } // power spectrograms
+    static std::tuple<Eigen::ArrayXf, Eigen::ArrayXf> initOutput(Input input, const Coefficients &c)
+    {
+        return {Eigen::ArrayXf::Zero(c.nBands), Eigen::ArrayXf::Zero(c.nBands)};
+    } // power spectrograms
 
     static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && input.allFinite(); }
 
-    static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output.cols() == 2) && output.allFinite() && (output >= 0).all(); }
+    static bool validOutput(Output output, const Coefficients &c)
+    {
+        return (output.minPower.rows() == c.nBands) && (output.maxPower.rows() == c.nBands) && output.minPower.allFinite() && output.maxPower.allFinite() &&
+               (output.minPower >= 0).all() && (output.maxPower >= 0).all();
+    }
 };
 
 class SpectrogramMinMax : public AlgorithmImplementation<SpectrogramMinMaxConfiguration, SpectrogramMinMax>
@@ -69,21 +80,21 @@ class SpectrogramMinMax : public AlgorithmImplementation<SpectrogramMinMaxConfig
     void inline processAlgorithm(Input input, Output output)
     {
         filterbanks[0].process(input, filterbankOut);
-        output.col(0) = filterbankOut.abs2();
-        output.col(1) = output.col(0); // initialize max with min
+        output.minPower = filterbankOut.abs2();
+        output.maxPower = output.minPower; // initialize max with min
         filterbanks[1].process(input, filterbankOut);
         for (auto iBand = 0; iBand < C.nBands; iBand++)
         {
             float power = std::norm(filterbankOut(iBand));
-            output(iBand, 0) = std::min(output(iBand, 0), power);
-            output(iBand, 1) = std::max(output(iBand, 1), power);
+            output.minPower(iBand) = std::min(output.minPower(iBand), power);
+            output.maxPower(iBand) = std::max(output.maxPower(iBand), power);
         }
         filterbanks[2].process(input, filterbankOut);
         for (auto iBand = 0; iBand < C.nBands; iBand++)
         {
             float power = std::norm(filterbankOut(iBand));
-            output(iBand, 0) = std::min(output(iBand, 0), power);
-            output(iBand, 1) = std::max(output(iBand, 1), power);
+            output.minPower(iBand) = std::min(output.minPower(iBand), power);
+            output.maxPower(iBand) = std::max(output.maxPower(iBand), power);
         }
     }
 
