@@ -77,7 +77,7 @@ class SpectrogramAdaptiveMinMax : public AlgorithmImplementation<SpectrogramAdap
         for (auto iFrame = 0; iFrame < spectrogramOut[2].cols() + 1; iFrame++)
         {
             filterMinMax.process(spectrogramRaw[2].col(iFrame), {minEnvelope, maxEnvelope});
-            weight.col(iFrame) = (spectrogramRaw[2].col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f);
+            weight.col(iFrame) = ((spectrogramRaw[2].col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
         }
         upscale[2].process(weight, weightUpscaled);
 
