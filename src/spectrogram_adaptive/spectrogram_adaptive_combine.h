@@ -40,7 +40,7 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
 
             for (auto iFilterbank = 0; iFilterbank < 3; iFilterbank++)
             {
-                setReducedWindow(iSpectrogram, iFilterbank, window, positivePow2(iSpectrogram), winScale);
+                setReducedWindow(iSpectrogram, iFilterbank, positivePow2(iSpectrogram), winScale);
             }
         }
 
@@ -49,14 +49,13 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
         weight.resize(spectrogramOut.rows());
     }
 
-    void setReducedWindow(int nSpectrogram, int nFilterbank, I::Real window, int stride, int winScale)
+    void setReducedWindow(int nSpectrogram, int nFilterbank, int stride, int winScale)
     {
-        Eigen::ArrayXf windowSmall = spectrograms[nSpectrogram].filterbanks[nFilterbank].getWindow();
+        Eigen::ArrayXf window = spectrograms[nSpectrogram].filterbanks[nFilterbank].getWindow();
         int winSize = window.size();
+        Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Zero(winSize); // create a zeroed array of the same size as the original window
         int winSmallSize = winSize / stride;
-        windowSmall.head((winSize - winSmallSize) / 2).setZero();
         windowSmall.segment((winSize - winSmallSize) / 2, winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
-        windowSmall.tail((winSize - winSmallSize) / 2).setZero(); // zero out the last half of the small window
         windowSmall *= winScale / windowSmall.sum();
         spectrograms[nSpectrogram].filterbanks[nFilterbank].setWindow(windowSmall);
     }
