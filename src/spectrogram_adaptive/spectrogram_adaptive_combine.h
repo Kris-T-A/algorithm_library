@@ -1,7 +1,8 @@
 #pragma once
 #include "algorithm_library/spectrogram_adaptive.h"
+#include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
-#include "spectrogram/spectrogram_filterbank.h"
+#include "spectrogram/spectrogram_nonlinear.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 
 // Adaptive Spectrogram
@@ -11,12 +12,9 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
 {
   public:
     SpectrogramAdaptiveCombine(Coefficients c = Coefficients())
-        : BaseAlgorithm{c}, spectrogramAdaptive({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = 0}),
-          spectrograms(2,                                                               // set 2 filterbanks
-                       {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), // set to smallest buffer size
-                        .nBands = c.nBands,
-                        .nFolds = c.nFolds,
-                        .nonlinearity = 0}) // nonlinearity is not used
+        : BaseAlgorithm{c},
+          spectrograms(c.nSpectrograms, {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.nBands, .nFolds = c.nFolds, .nonlinearity = 1}),
+          filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate / 4), .nChannels = 1})
     {
         assert(c.nSpectrograms > 0 && c.nBands > 0 && c.bufferSize > 0 && c.nFolds > 0);
 
@@ -24,61 +22,91 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
         frameSize = c.bufferSize / nOutputFrames;
         spectrogramOut = spectrograms[0].initDefaultOutput();
 
-        // calculate small window
-        FilterbankConfiguration::Coefficients cFB = spectrograms[0].filterbank.getCoefficients();
-        cFB.nBands = (c.nBands - 1) / positivePow2(c.nSpectrograms - 1) + 1; // adjust nBands to the smallest filterbank
-        Eigen::ArrayXf windowSmall = FilterbankShared::getAnalysisWindow(cFB);
-        int lengthSmall = windowSmall.size();
+        // spectrogram 0
+        Eigen::ArrayXf window = spectrograms[0].filterbanks[0].getWindow();
+        float winScale = window.sum();
 
-        // set last half of the first spectrogram's window to the last half of the small window
-        Eigen::ArrayXf window = spectrograms[0].filterbank.getWindow();
-        float winScale = window.abs2().sum();
-        int length = window.size();
-        window.segment(length / 2, lengthSmall / 2) =
-            windowSmall.segment(lengthSmall / 2, lengthSmall / 2); // copy the last half of the small window to the middle of the large window
-        window.tail((length - lengthSmall) / 2).setZero();         // zero out the last half of the large window
-        window *= winScale / window.abs2().sum();                  // scale the large window to have the same energy as the small window
-        spectrograms[0].filterbank.setWindow(window);
+        Eigen::ArrayXf windowSmall = spectrograms[0].filterbanks[1].getWindow();
+        windowSmall *= winScale / windowSmall.sum(); // scale the small window
+        spectrograms[0].filterbanks[1].setWindow(windowSmall);
 
-        // set first half of the second spectrogram's window to the first half of the small window
-        window = spectrograms[1].filterbank.getWindow();
-        window.segment((length - lengthSmall) / 2, lengthSmall / 2) =
-            windowSmall.head(lengthSmall / 2);             // copy the first half of the small window to the middle of the large window
-        window.head((length - lengthSmall) / 2).setZero(); // zero out the first half of the large window
-        window *= winScale / window.abs2().sum();          // scale the large window to have the same energy as the small window
-        spectrograms[1].filterbank.setWindow(window);
+        windowSmall = spectrograms[0].filterbanks[2].getWindow();
+        windowSmall *= winScale / windowSmall.sum(); // scale the small window
+        spectrograms[0].filterbanks[2].setWindow(windowSmall);
+
+        // scale smaller spectrograms
+        for (auto iSpectrogram = 1; iSpectrogram < c.nSpectrograms; iSpectrogram++)
+        {
+
+            for (auto iFilterbank = 0; iFilterbank < 3; iFilterbank++)
+            {
+                setReducedWindow(iSpectrogram, iFilterbank, window, positivePow2(iSpectrogram), winScale);
+            }
+        }
+
+        minEnvelope.resize(spectrogramOut.rows());
+        maxEnvelope.resize(spectrogramOut.rows());
+        weight.resize(spectrogramOut.rows());
     }
 
-    SpectrogramAdaptiveWOLA spectrogramAdaptive;
-    VectorAlgo<SpectrogramFilterbank> spectrograms;
-    DEFINE_MEMBER_ALGORITHMS(spectrogramAdaptive, spectrograms)
+    void setReducedWindow(int nSpectrogram, int nFilterbank, I::Real window, int stride, int winScale)
+    {
+        Eigen::ArrayXf windowSmall = spectrograms[nSpectrogram].filterbanks[nFilterbank].getWindow();
+        int winSize = window.size();
+        int winSmallSize = winSize / stride;
+        windowSmall.head((winSize - winSmallSize) / 2).setZero();
+        windowSmall.segment((winSize - winSmallSize) / 2, winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
+        windowSmall.tail((winSize - winSmallSize) / 2).setZero(); // zero out the last half of the small window
+        windowSmall *= winScale / windowSmall.sum();
+        spectrograms[nSpectrogram].filterbanks[nFilterbank].setWindow(windowSmall);
+    }
+
+    VectorAlgo<SpectrogramNonlinear> spectrograms;
+    FilterMinMaxLemire filterMinMax;
+    DEFINE_MEMBER_ALGORITHMS(spectrograms, filterMinMax)
 
   private:
     void inline processAlgorithm(Input input, Output output)
     {
-        // process the adaptive spectrogram
-        spectrogramAdaptive.process(input, output);
-
         for (auto iFrame = 0; iFrame < nOutputFrames; iFrame++)
         {
-            for (auto iSG = 0; iSG < static_cast<int>(spectrograms.size()); iSG++)
+            // process each spectrogram
+            spectrograms[0].process(input.segment(iFrame * frameSize, frameSize), spectrogramOut);
+            output.col(iFrame) = 10 * spectrogramOut.max(1e-20f).log10(); // convert to dB
+            for (auto iSpectrogram = 1; iSpectrogram < C.nSpectrograms; iSpectrogram++)
             {
-                spectrograms[iSG].process(input.segment(iFrame * frameSize, frameSize), spectrogramOut);
-                spectrogramOut = 10.f * spectrogramOut.max(1e-20f).log10(); // convert to dB
-                output.col(iFrame) = output.col(iFrame).min(spectrogramOut);
+                spectrograms[iSpectrogram].process(input.segment(iFrame * frameSize, frameSize), spectrogramOut);
+                spectrogramOut = 10 * spectrogramOut.max(1e-20f).log10();    // convert to dB
+                output.col(iFrame) = output.col(iFrame).min(spectrogramOut); // combine spectrograms by taking the minimum
+
+                if (iSpectrogram == 2)
+                {
+                    filterMinMax.process(spectrogramOut, {minEnvelope, maxEnvelope});
+                    weight = ((spectrogramOut - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
+                }
             }
+
+            // Here spectrogramOut contains the last spectrogram
+            weight = weight.min(1.f - ((spectrogramOut - output.col(iFrame) - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
+            output.col(iFrame) += weight * (spectrogramOut - output.col(iFrame));
         }
     }
 
     size_t getDynamicSizeVariables() const final
     {
         size_t size = spectrogramOut.getDynamicMemorySize();
+        size += minEnvelope.getDynamicMemorySize();
+        size += maxEnvelope.getDynamicMemorySize();
+        size += weight.getDynamicMemorySize();
         return size;
     }
 
     int nOutputFrames;
     int frameSize;
-    Eigen::ArrayXXf spectrogramOut;
+    Eigen::ArrayXf spectrogramOut;
+    Eigen::ArrayXf minEnvelope;
+    Eigen::ArrayXf maxEnvelope;
+    Eigen::ArrayXf weight;
 
     friend BaseAlgorithm;
 };
