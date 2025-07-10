@@ -14,7 +14,7 @@ class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAda
     SpectrogramAdaptiveCombine(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
           spectrograms(c.nSpectrograms, {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.nBands, .nFolds = c.nFolds, .nonlinearity = 1}),
-          filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate / 4), .nChannels = 1})
+          filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1})
     {
         assert(c.nSpectrograms > 0 && c.nBands > 0 && c.bufferSize > 0 && c.nFolds > 0);
 
