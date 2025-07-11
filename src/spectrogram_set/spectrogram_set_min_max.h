@@ -1,6 +1,6 @@
 #pragma once
 #include "framework/framework.h"
-#include "spectrogram/spectrogram_min_max.h"
+#include "spectrogram/spectrogram_nonlinear.h"
 #include "utilities/fastonebigheader.h"
 
 // A set of spectrograms supporting 1 channel input
@@ -17,7 +17,7 @@ struct SpectrogramSetMinMaxConfiguration
     struct Coefficients
     {
         int bufferSize = 1024; // buffer size in the first filterbank
-        int nBands = 2049;     // number of frequency bands in the first filterbank
+        int nBands = 2049;     // number of frequency bands in all filterbanks
         int nSpectrograms = 4; // each spectrogram halves the buffer size
         int nFolds = 1;        // number of folds: frameSize = nFolds * 2 * (nBands - 1)
         DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nSpectrograms, nFolds)
@@ -32,13 +32,11 @@ struct SpectrogramSetMinMaxConfiguration
 
     static std::vector<Eigen::ArrayXXf> initOutput(Input input, const Coefficients &c)
     {
-        std::vector<Eigen::ArrayXXf> output(2 * c.nSpectrograms);
+        std::vector<Eigen::ArrayXXf> output(c.nSpectrograms);
         for (auto i = 0; i < c.nSpectrograms; i++)
         {
             int nFrames = 1 << i;
-            int nBands = (c.nBands - 1) / nFrames + 1;
-            output[i] = Eigen::ArrayXXf::Zero(nBands, nFrames);
-            output[c.nSpectrograms + i] = Eigen::ArrayXXf::Zero(nBands, nFrames);
+            output[i] = Eigen::ArrayXXf::Zero(c.nBands, nFrames);
         }
         return output;
     }
@@ -47,19 +45,11 @@ struct SpectrogramSetMinMaxConfiguration
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        if (static_cast<int>(output.size()) != 2 * c.nSpectrograms) { return false; }
+        if (static_cast<int>(output.size()) != c.nSpectrograms) { return false; }
         for (auto i = 0; i < c.nSpectrograms; i++)
         {
             int nFrames = 1 << i;
-            int fftSize = FFTConfiguration::convertNBandsToFFTSize(c.nBands) / nFrames;
-            if (!FFTConfiguration::isFFTSizeValid(fftSize)) { return false; }
-            int nBands = FFTConfiguration::convertFFTSizeToNBands(fftSize);
-            if ((output[i].rows() != nBands) || (output[i].cols() != nFrames) || (!output[i].allFinite()) || !((output[i] >= 0).all())) { return false; }
-            if ((output[c.nSpectrograms + i].rows() != nBands) || (output[c.nSpectrograms + i].cols() != nFrames) || (!output[c.nSpectrograms + i].allFinite()) ||
-                !((output[c.nSpectrograms + i] >= 0).all()))
-            {
-                return false;
-            }
+            if ((output[i].rows() != c.nBands) || (output[i].cols() != nFrames) || (!output[i].allFinite()) || !((output[i] >= 0).all())) { return false; }
         }
         return true;
     }
@@ -68,14 +58,15 @@ struct SpectrogramSetMinMaxConfiguration
 class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMaxConfiguration, SpectrogramSetMinMax>
 {
   public:
-    SpectrogramSetMinMax(Coefficients c = {.bufferSize = 1024, .nBands = 1025, .nSpectrograms = 4, .nFolds = 1})
+    SpectrogramSetMinMax(Coefficients c = Coefficients())
         : BaseAlgorithm{c}, spectrograms([&c]() {
-              std::vector<SpectrogramMinMax::Coefficients> cSG(c.nSpectrograms);
+              std::vector<SpectrogramNonlinear::Coefficients> cSG(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
               {
                   cSG[i].bufferSize = c.bufferSize / positivePow2(i);
-                  cSG[i].nBands = (c.nBands - 1) / positivePow2(i) + 1;
+                  cSG[i].nBands = c.nBands;
                   cSG[i].nFolds = c.nFolds;
+                  cSG[i].nonlinearity = 1;
               }
               return cSG;
           }())
@@ -85,20 +76,36 @@ class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMax
         nBuffers[0] = 1;
         bufferSizes[0] = C.bufferSize;
         float winScale = spectrograms[0].filterbanks[0].getWindow().sum();
+        Eigen::ArrayXf window = spectrograms[0].filterbanks[1].getWindow();
+        window *= winScale / window.sum();
+        spectrograms[0].filterbanks[1].setWindow(window);
+        window = spectrograms[0].filterbanks[2].getWindow();
+        window *= winScale / window.sum();
+        spectrograms[0].filterbanks[2].setWindow(window);
+
         for (auto iSG = 1; iSG < C.nSpectrograms; iSG++)
         {
             nBuffers[iSG] = nBuffers[iSG - 1] * 2;
             bufferSizes[iSG] = bufferSizes[iSG - 1] / 2;
             for (auto iFB = 0; iFB < static_cast<int>(spectrograms[iSG].filterbanks.size()); iFB++)
             {
-                Eigen::ArrayXf window = spectrograms[iSG].filterbanks[iFB].getWindow();
-                window *= winScale / window.sum(); // scale the window to have the same DC value as the first filterbank
-                spectrograms[iSG].filterbanks[iFB].setWindow(window);
+                setReducedWindow(iSG, iFB, positivePow2(iSG), winScale);
             }
         }
     }
 
-    VectorAlgo<SpectrogramMinMax> spectrograms;
+    void setReducedWindow(int nSpectrogram, int nFilterbank, int stride, int winScale)
+    {
+        Eigen::ArrayXf window = spectrograms[nSpectrogram].filterbanks[nFilterbank].getWindow();
+        int winSize = window.size();
+        Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Zero(winSize); // create a zeroed array of the same size as the original window
+        int winSmallSize = winSize / stride;
+        windowSmall.segment((winSize - winSmallSize) / 2, winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
+        windowSmall *= winScale / windowSmall.sum();
+        spectrograms[nSpectrogram].filterbanks[nFilterbank].setWindow(windowSmall);
+    }
+
+    VectorAlgo<SpectrogramNonlinear> spectrograms;
     DEFINE_MEMBER_ALGORITHMS(spectrograms)
 
   private:
@@ -108,8 +115,7 @@ class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMax
         {
             for (auto iSubFrame = 0; iSubFrame < nBuffers[iSG]; iSubFrame++)
             {
-                spectrograms[iSG].process(input.segment(iSubFrame * bufferSizes[iSG], bufferSizes[iSG]),
-                                          {output[iSG].col(iSubFrame), output[C.nSpectrograms + iSG].col(iSubFrame)});
+                spectrograms[iSG].process(input.segment(iSubFrame * bufferSizes[iSG], bufferSizes[iSG]), output[iSG].col(iSubFrame));
             }
         }
     }
