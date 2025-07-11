@@ -1,5 +1,6 @@
 #include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_neighbour.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
@@ -13,6 +14,8 @@ TEST(SpectrogramAdaptive, Interface) { EXPECT_TRUE(InterfaceTests::algorithmInte
 TEST(SpectrogramAdaptive, InterfaceCombine) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveCombine>()); }
 
 TEST(SpectrogramAdaptive, InterfaceMinMax) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveMinMax>()); }
+
+TEST(SpectrogramAdaptive, InterfaceNeighbour) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveNeighbour>()); }
 
 // description: test nFrames is a static function and that it returns correct number of frames.
 TEST(SpectrogramAdaptive, getNFrames)
