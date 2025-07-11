@@ -1,5 +1,8 @@
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_neighbour.h"
 #include <emscripten/bind.h>
 #include <nmmintrin.h>
 
@@ -29,6 +32,7 @@ extern "C"
         c.nBands = 2 * bufferSize + 1;
         c.nFolds = 1;
         c.nonlinearity = 1;
+        c.sampleRate = 16000;
         c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create instance of SpectrogramSet
