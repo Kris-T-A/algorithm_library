@@ -32,10 +32,9 @@
 #include "spectral_compressor/spectral_compressor_wola.h"
 #include "spectral_compressor/spectral_selector.h"
 #include "spectrogram/spectrogram_filterbank.h"
+#include "spectrogram/spectrogram_min_max.h"
 #include "spectrogram/spectrogram_nonlinear.h"
 #include "spline/spline_cubic.h"
-
-
 
 // Macro for defining timing test using google benchmark framework
 #define DEFINE_BENCHMARK_ALGORITHM(algorithm)                                                                                                                                 \
@@ -102,6 +101,7 @@ DEFINE_BENCHMARK_ALGORITHM(CombineBandsplitDownsampleChebyshev)
 DEFINE_BENCHMARK_ALGORITHM(SpectralCompressorWOLA)
 DEFINE_BENCHMARK_ALGORITHM(SpectralCompressorAdaptive)
 DEFINE_BENCHMARK_ALGORITHM(SpectralSelector)
+DEFINE_BENCHMARK_ALGORITHM(SpectrogramMinMax)
 
 // benchmark inverse FFT
 static void FFTInverse_process(benchmark::State &state)
