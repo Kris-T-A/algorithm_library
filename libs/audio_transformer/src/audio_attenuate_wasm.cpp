@@ -20,7 +20,7 @@ extern "C"
     } // namespace
 
     EMSCRIPTEN_KEEPALIVE
-    void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float *output)
+    void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output)
     {
         // Validate input parameters
         if (!input || !output) { return; }
@@ -32,7 +32,7 @@ extern "C"
         c.nBands = 2 * bufferSize + 1;
         c.nFolds = 1;
         c.nonlinearity = 1;
-        c.sampleRate = 16000;
+        c.sampleRate = sampleRate;
         c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create instance of SpectrogramSet
