@@ -30,3 +30,29 @@ TEST(Upscale2DLinear, printOutput)
     std::cout << "input: \n" << input << "\n";
     std::cout << "output: \n" << output << "\n";
 }
+
+// test upscaling when horizontal upscaling is 1
+TEST(Upscale2DLinear, Horizontal1)
+{
+    auto c = Upscale2DLinear::Coefficients();
+    c.factorHorizontal = 1;
+    c.factorVertical = 8;
+    c.leftBoundaryExcluded = true;
+    Upscale2DLinear upscale(c);
+
+    int nRows = 3;
+    int nCols = 9;
+    Eigen::ArrayXXf input(nRows, nCols);
+    for (auto i = 0; i < nRows; i++)
+    {
+        for (auto j = 0; j < nCols; j++)
+        {
+            input(i, j) = static_cast<float>(i + j);
+        }
+    }
+    auto output = upscale.initOutput(input);
+    upscale.process(input, output);
+
+    std::cout << "input: \n" << input << "\n";
+    std::cout << "output: \n" << output << "\n";
+}
