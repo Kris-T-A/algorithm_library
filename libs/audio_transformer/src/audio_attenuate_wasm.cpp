@@ -1,8 +1,8 @@
 #include "audio_attenuate/audio_attenuate_adaptive.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_neighbour.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_full_resolution.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_envelope.h"
 #include <emscripten/bind.h>
 #include <nmmintrin.h>
 
