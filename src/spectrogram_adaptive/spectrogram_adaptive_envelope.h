@@ -1,57 +1,55 @@
 #pragma once
 #include "algorithm_library/spectrogram_adaptive.h"
-#include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 #include "spectrogram_adaptive/upscale2d_linear.h"
-#include "spectrogram_set/spectrogram_set_min_max.h"
+#include "spectrogram_set/spectrogram_set_wola.h"
 #include "utilities/fastonebigheader.h"
 
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
-class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveNeighbour>
+class SpectrogramAdaptiveEnvelope : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveEnvelope>
 {
   public:
-    SpectrogramAdaptiveNeighbour(Coefficients c = Coefficients())
-        : BaseAlgorithm{c}, spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds}), upscale([&c]() {
+    SpectrogramAdaptiveEnvelope(Coefficients c = Coefficients())
+        : BaseAlgorithm{c},
+          spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+          upscale([&c]() {
               std::vector<Upscale2DLinear::Coefficients> cUpscale(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
               {
                   cUpscale[i].factorHorizontal = positivePow2(c.nSpectrograms - 1 - i);
-                  cUpscale[i].factorVertical = 1;
+                  cUpscale[i].factorVertical = positivePow2(i);
                   cUpscale[i].leftBoundaryExcluded = true;
               }
               return cUpscale;
-          }()),
-          filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1})
+          }())
     {
         nOutputFrames = positivePow2(c.nSpectrograms - 1); // 2^(nSpectrograms-1) frames
         Eigen::ArrayXf inputFrame(c.bufferSize);
         spectrogramOut = spectrogramSet.initOutput(inputFrame);
 
         spectrogramRaw.resize(c.nSpectrograms);
-        spectrogramRaw[0].resize(spectrogramOut[0].rows(), 2);                           // first spectrogram has 2 columns (current and previous frame)
+        spectrogramRaw[0] = Eigen::ArrayXXf::Zero(spectrogramOut[0].rows(), 2);          // first spectrogram has 2 columns (current and previous frame)
         int delayRef = spectrogramSet.spectrograms[0].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
         for (auto i = 1; i < c.nSpectrograms; i++)
         {
             int bufferSize = c.bufferSize / positivePow2(i);
             int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
             int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1;        // 2 columns for current and previous frame, plus additional columns for the delay
-            spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
+            spectrogramRaw[i] = Eigen::ArrayXXf::Zero(spectrogramOut[i].rows(), nCols);
         }
-        spectrogramUpscaled.resize(c.nBands, nOutputFrames);
-        minEnvelope.resize(spectrogramOut[2].rows());
-        maxEnvelope.resize(spectrogramOut[2].rows());
-        weight.resize(spectrogramOut[2].rows(), spectrogramOut[2].cols() + 1);
-        weightUpscaled.resize(c.nBands, nOutputFrames);
-
-        resetVariables();
+        spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
+        oldGain = Eigen::ArrayXf::Zero(c.nBands);
+        int nFB = C.nSpectrograms - 2;
+        int nRows = spectrogramRaw[nFB].rows();
+        int nCols = spectrogramOut[nFB].cols() + 1;
+        maxValue.resize(nRows, nCols);
     }
 
-    SpectrogramSetMinMax spectrogramSet;
+    SpectrogramSetWOLA spectrogramSet;
     VectorAlgo<Upscale2DLinear> upscale;
-    FilterMinMaxLemire filterMinMax;
-    DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, filterMinMax)
+    DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale)
 
   private:
     void inline processAlgorithm(Input input, Output output)
@@ -74,24 +72,30 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
             output = output.min(spectrogramUpscaled);
         }
 
-        for (auto iFrame = 0; iFrame < spectrogramOut[2].cols() + 1; iFrame++)
+        int nFB = C.nSpectrograms - 2;
+        int nRows = spectrogramRaw[nFB].rows();
+        int nCols = spectrogramOut[nFB].cols() + 1;
+        int upRow = positivePow2(C.nSpectrograms - 1 - nFB); // 1
+        int upCol = positivePow2(nFB);                       // 8
+        maxValue(0, 0) = oldGain.head(1 + upCol / 2).maxCoeff();
+        for (auto iBand = 1; iBand < nRows - 1; iBand++)
         {
-            filterMinMax.process(spectrogramRaw[2].col(iFrame), {minEnvelope, maxEnvelope});
-            weight.col(iFrame) = ((spectrogramRaw[2].col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
+            maxValue(iBand, 0) = oldGain.segment(1 + upCol / 2 + (iBand - 1) * upCol, upCol).maxCoeff();
         }
-        upscale[2].process(weight, weightUpscaled);
-
-        // Here spectrogramUpscaled contains the upscaled spectrogram of the smallest frame size
-        weightUpscaled = weightUpscaled.min(1.f - ((spectrogramUpscaled - output - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
-        output += weightUpscaled * (spectrogramUpscaled - output);
-    }
-
-    void resetVariables() final
-    {
-        for (auto &spectrogram : spectrogramRaw)
+        maxValue(nRows - 1, 0) = oldGain.tail(1 + upCol / 2).maxCoeff();
+        for (auto frame = 1; frame < nCols; frame++)
         {
-            spectrogram.setZero();
+            maxValue(0, frame) = output.block(0, (frame - 1) * upRow, 1 + upCol / 2, upRow).maxCoeff();
+            for (auto iBand = 1; iBand < nRows - 1; iBand++)
+            {
+                maxValue(iBand, frame) = output.block(1 + upCol / 2 + (iBand - 1) * upCol, (frame - 1) * upRow, upCol, upRow).maxCoeff();
+            }
+            maxValue(nRows - 1, frame) = output.bottomRows(1 + upCol / 2).middleCols((frame - 1) * upRow, upRow).maxCoeff();
         }
+        maxValue -= spectrogramRaw[nFB].leftCols(nCols); // convert power to dB
+        upscale[nFB].process(maxValue, spectrogramUpscaled);
+        oldGain = output.col(nOutputFrames - 1);
+        output -= spectrogramUpscaled;
     }
 
     size_t getDynamicSizeVariables() const final
@@ -103,10 +107,8 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
             size += spectrogramRaw[i].getDynamicMemorySize();
         }
         size += spectrogramUpscaled.getDynamicMemorySize();
-        size += minEnvelope.getDynamicMemorySize();
-        size += maxEnvelope.getDynamicMemorySize();
-        size += weight.getDynamicMemorySize();
-        size += weightUpscaled.getDynamicMemorySize();
+        size += oldGain.getDynamicMemorySize();
+        size += maxValue.getDynamicMemorySize();
         return size;
     }
 
@@ -114,10 +116,8 @@ class SpectrogramAdaptiveNeighbour : public AlgorithmImplementation<SpectrogramA
     std::vector<Eigen::ArrayXXf> spectrogramOut;
     std::vector<Eigen::ArrayXXf> spectrogramRaw;
     Eigen::ArrayXXf spectrogramUpscaled;
-    Eigen::ArrayXf minEnvelope;
-    Eigen::ArrayXf maxEnvelope;
-    Eigen::ArrayXXf weight;
-    Eigen::ArrayXXf weightUpscaled;
+    Eigen::ArrayXf oldGain;
+    Eigen::ArrayXXf maxValue;
 
     friend BaseAlgorithm;
 };

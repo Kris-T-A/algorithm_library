@@ -3,15 +3,14 @@
 #include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 #include "spectrogram/spectrogram_nonlinear.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
-class SpectrogramAdaptiveCombine : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveCombine>
+class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveFullResolution>
 {
   public:
-    SpectrogramAdaptiveCombine(Coefficients c = Coefficients())
+    SpectrogramAdaptiveFullResolution(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
           spectrograms(c.nSpectrograms, {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.nBands, .nFolds = c.nFolds, .nonlinearity = 1}),
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1})

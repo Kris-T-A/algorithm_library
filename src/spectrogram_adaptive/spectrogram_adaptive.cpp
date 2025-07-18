@@ -1,4 +1,3 @@
-#include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 
-DEFINE_ALGORITHM_CONSTRUCTOR(SpectrogramAdaptive, SpectrogramAdaptiveWOLA, SpectrogramAdaptiveConfiguration)
+DEFINE_ALGORITHM_CONSTRUCTOR(SpectrogramAdaptive, SpectrogramAdaptiveZeropad, SpectrogramAdaptiveConfiguration)

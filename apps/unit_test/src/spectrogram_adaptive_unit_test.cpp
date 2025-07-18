@@ -1,7 +1,7 @@
-#include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_envelope.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_full_resolution.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_neighbour.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
 
@@ -9,13 +9,13 @@ using namespace Eigen;
 
 // --------------------------------------------- TEST CASES ---------------------------------------------
 
-TEST(SpectrogramAdaptive, Interface) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveWOLA>()); }
+TEST(SpectrogramAdaptive, InterfaceEnvelope) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveEnvelope>()); }
 
-TEST(SpectrogramAdaptive, InterfaceCombine) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveCombine>()); }
+TEST(SpectrogramAdaptive, InterfaceFullResolution) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveFullResolution>()); }
 
 TEST(SpectrogramAdaptive, InterfaceMinMax) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveMinMax>()); }
 
-TEST(SpectrogramAdaptive, InterfaceNeighbour) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveNeighbour>()); }
+TEST(SpectrogramAdaptive, InterfaceZeropad) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<SpectrogramAdaptiveZeropad>()); }
 
 // description: test nFrames is a static function and that it returns correct number of frames.
 TEST(SpectrogramAdaptive, getNFrames)

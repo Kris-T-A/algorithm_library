@@ -2,21 +2,22 @@
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "framework/framework.h"
 #include "scale_transform/log_scale.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "utilities/fastonebigheader.h"
 
 class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualSpectrogram>
 {
   public:
     PerceptualSpectrogram(const Coefficients &c = Coefficients())
-        : BaseAlgorithm{c}, spectrogram({.bufferSize = c.bufferSize, .nBands = c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+        : BaseAlgorithm{c},
+          spectrogram({.bufferSize = c.bufferSize, .nBands = c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
           logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
         if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
     }
 
-    SpectrogramAdaptiveWOLA spectrogram;
+    SpectrogramAdaptiveZeropad spectrogram;
     LogScale logScale;
     DEFINE_MEMBER_ALGORITHMS(spectrogram, logScale)
 
