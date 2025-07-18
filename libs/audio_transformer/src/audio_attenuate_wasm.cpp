@@ -1,8 +1,8 @@
 #include "audio_attenuate/audio_attenuate_adaptive.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_combine.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_neighbour.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_wola.h"
 #include <emscripten/bind.h>
 #include <nmmintrin.h>
 
@@ -17,7 +17,7 @@ extern "C"
     constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
     constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
     constexpr int FRAMES_PER_BUFFER = 8;             // number of frames per buffer
-    } // namespace
+    }                                                // namespace
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output)
@@ -36,7 +36,7 @@ extern "C"
         c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create instance of SpectrogramSet
-        SpectrogramAdaptiveWOLA spectrogram(c);
+        SpectrogramAdaptiveZeropad spectrogram(c);
 
         // derived values
         const int length = bufferSize * nBuffers;         // total length of input in samples. It is callers responsibility to ensure that input is at least this long
