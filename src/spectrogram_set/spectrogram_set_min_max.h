@@ -20,7 +20,8 @@ struct SpectrogramSetMinMaxConfiguration
         int nBands = 2049;     // number of frequency bands in all filterbanks
         int nSpectrograms = 4; // each spectrogram halves the buffer size
         int nFolds = 1;        // number of folds: frameSize = nFolds * 2 * (nBands - 1)
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nSpectrograms, nFolds)
+        int nonlinearity = 1;  // nonlinearity
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nSpectrograms, nFolds, nonlinearity)
     };
 
     struct Parameters
@@ -66,7 +67,7 @@ class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMax
                   cSG[i].bufferSize = c.bufferSize / positivePow2(i);
                   cSG[i].nBands = c.nBands;
                   cSG[i].nFolds = c.nFolds;
-                  cSG[i].nonlinearity = 1;
+                  cSG[i].nonlinearity = c.nonlinearity;
               }
               return cSG;
           }())
