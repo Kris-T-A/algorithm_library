@@ -3,6 +3,7 @@
 #include <cxxopts.hpp>
 #include <iostream>
 #include "spectrogram_process.h"
+#include "spectrogram_adaptive_zeropad_process.h"
 
 using namespace Eigen;
 using namespace Pyplotcpp;
@@ -11,6 +12,23 @@ using namespace Pyplotcpp;
 constexpr int VERSION_MAJOR = 1;
 constexpr int VERSION_MINOR = 0;
 constexpr int VERSION_PATCH = 0;
+
+// split a string by a delimiter
+// This function is used to split the output file name into file name and extension
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    size_t start = 0;
+    size_t end = str.find(delimiter);
+    
+    while (end != std::string::npos) {
+        tokens.push_back(str.substr(start, end - start));
+        start = end + 1;
+        end = str.find(delimiter, start);
+    }
+    
+    tokens.push_back(str.substr(start));
+    return tokens;
+}
 
 int main(int argc, char **argv)
 {
@@ -57,6 +75,8 @@ int main(int argc, char **argv)
     audioFileInput.printSummary();
     std::cout << "\n";
 
+    auto outputSplit = split(outputName, '.');
+
     std::cout << "Processing summary:\n";
     int bufferSize = static_cast<int>(hopSizeMilliseconds / 1000.f * audioFileInput.getSampleRate());
     std::cout << "Buffer size: " << bufferSize << "\n";
@@ -73,7 +93,14 @@ int main(int argc, char **argv)
 
 
     std::cout << "Processing audio file...\n";
-    spectrogramProcess(&audioFileInput.samples[0][0], outputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+
+    std::cout << "Processing spectrogram...\n";
+    std::string spectrogramOutputName = outputSplit[0] + "_spectrogram." + outputSplit[1];
+    spectrogramProcess(&audioFileInput.samples[0][0], spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+
+    std::cout << "Processing spectrogram adaptive zeropad...\n";
+    spectrogramOutputName = outputSplit[0] + "_spectrogram_adaptive_zeropad." + outputSplit[1];
+    spectrogramAdaptiveZeropadProcess(&audioFileInput.samples[0][0], spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
 
     std::cout << "DONE!\n" << std::endl;
 
