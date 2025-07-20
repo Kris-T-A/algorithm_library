@@ -1,18 +1,20 @@
 #include "AudioFile.h"
-#include <algorithm_library/spectrogram.h>
+#include <algorithm_library/fft.h>
 #include <cxxopts.hpp>
 #include <iostream>
-#include <pyplot_cpp/pyplot_cpp.h>
+#include "spectrogram_process.h"
 
 using namespace Eigen;
 using namespace Pyplotcpp;
 
 // set constants
-constexpr int VERSION = 1;
+constexpr int VERSION_MAJOR = 1;
+constexpr int VERSION_MINOR = 0;
+constexpr int VERSION_PATCH = 0;
 
 int main(int argc, char **argv)
 {
-    cxxopts::Options options(*argv, "A program for creating spectrograms of audio files.");
+    cxxopts::Options options(*argv, "An app for creating spectrograms of audio files.");
 
     std::string inputName;
     std::string outputName;
@@ -22,8 +24,8 @@ int main(int argc, char **argv)
     options.add_options()("h,help", "Show help")("v,version", "Print the current version number")("i,input", "Name of input file",
                                                                                                   cxxopts::value(inputName)->default_value("input.wav"))(
         "o,output", "Name of output file", cxxopts::value(outputName)->default_value("output.png"))("t,hop_size", "Size of each time hop between spectrums in milliseconds",
-                                                                                                    cxxopts::value(hopSizeMilliseconds)->default_value("10.f"))(
-        "s,spectrum_size", "Size of each frame used for calculating the spectrum in milliseconds", cxxopts::value(spectrumSizeMilliseconds)->default_value("80.f"));
+                                                                                                    cxxopts::value(hopSizeMilliseconds)->default_value("10.0"))(
+        "s,spectrum_size", "Size of each frame used for calculating the spectrum in milliseconds", cxxopts::value(spectrumSizeMilliseconds)->default_value("80.0"));
 
     options.allow_unrecognised_options();
 
@@ -37,43 +39,41 @@ int main(int argc, char **argv)
 
     if (result["version"].as<bool>())
     {
-        std::cout << "version " << VERSION << std::endl;
+        std::cout << "version " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
         return 0;
     }
 
     AudioFile<float> audioFileInput;
+    audioFileInput.shouldLogErrorsToConsole(false);
     audioFileInput.load(inputName);
+
+    if (audioFileInput.getLengthInSeconds() == 0)
+    {
+        std::cerr << "Error: Audio file is empty or could not be loaded." << std::endl;
+        return 1;
+    }
+
     std::cout << "Input file summary:\n";
     audioFileInput.printSummary();
     std::cout << "\n";
 
     std::cout << "Processing summary:\n";
-    auto c = Spectrogram::Coefficients();
-    c.bufferSize = static_cast<int>(hopSizeMilliseconds / 1000.f * audioFileInput.getSampleRate());
-    std::cout << "Buffer size: " << c.bufferSize << "\n";
+    int bufferSize = static_cast<int>(hopSizeMilliseconds / 1000.f * audioFileInput.getSampleRate());
+    std::cout << "Buffer size: " << bufferSize << "\n";
     float fftSize = spectrumSizeMilliseconds / 1000.f * audioFileInput.getSampleRate();
-    c.fftSize = Spectrogram::getValidFFTSize(fftSize);
-    std::cout << "FFT size: " << c.fftSize << "\n";
-    Spectrogram spectrogram(c);
-
-    int nFrames = audioFileInput.getNumSamplesPerChannel() / c.bufferSize;
+    fftSize = FFTConfiguration::getValidFFTSize(fftSize);
+    std::cout << "FFT size: " << fftSize << "\n";
+    int nBands = FFTConfiguration::convertFFTSizeToNBands(fftSize);
+    std::cout << "Number of frequency bins: " << nBands << "\n";
+    int nFrames = audioFileInput.getNumSamplesPerChannel() / bufferSize;
     std::cout << "Number of frames: " << nFrames << "\n";
-    int nBins = c.fftSize / 2 + 1;
-    ArrayXXf spec(nBins, nFrames);
 
-    for (auto nFrame = 0; nFrame < nFrames; nFrame++)
-    {
-        ArrayXf frameIn = Map<ArrayXf>(&audioFileInput.samples[0][nFrame * c.bufferSize], c.bufferSize);
-        spectrogram.process(frameIn, spec.col(nFrame));
-    }
+    int nFolds = 1; // no overlap
+    int nonlinearity = 0; // no nonlinearity
 
-    spec = 20.f * spec.max(1e-20).log10();
-    float maxValue = spec.maxCoeff();
-    auto figure = imagesc(spec, {maxValue - 90, maxValue - 10});
-    xlabel("Frame Number");
-    ylabel("Frequency bin");
-    colorbar(figure);
-    save(outputName, 1000);
+
+    std::cout << "Processing audio file...\n";
+    spectrogramProcess(&audioFileInput.samples[0][0], outputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
 
     std::cout << "DONE!\n" << std::endl;
 
