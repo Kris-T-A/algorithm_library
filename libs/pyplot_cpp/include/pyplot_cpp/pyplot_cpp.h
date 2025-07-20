@@ -22,5 +22,7 @@ void colorbar(Figure *figure);
 
 void save(const std::string &filename, const int dpi = 0);
 void show(const bool block = true);
+void clear();
+void figure(long number = -1);
 void close();
 } // namespace Pyplotcpp
