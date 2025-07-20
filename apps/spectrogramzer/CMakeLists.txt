@@ -38,7 +38,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   adamstark/AudioFile
   GIT_TAG
-  1.1.1
+  1.1.3
   OPTIONS
   "BUILD_TESTS OFF"
   "BUILD_EXAMPLES OFF"
@@ -51,6 +51,8 @@ cpmaddpackage(NAME PyPlotCPP SOURCE_DIR ${PROJECT_SOURCE_DIR}/../../libs/pyplot_
 cpmaddpackage(NAME AlgorithmLibrary SOURCE_DIR ${PROJECT_SOURCE_DIR}/../..)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
+
+target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Werror -Wextra -Wno-unused-parameter -fno-strict-aliasing) # "no-unused-parameter": suppress unused parameter warning, -fno-strict-aliasing is necessary in release mode as otherwise AudioFile library reports a warning (which is treated as errors)
 
 # We need to include this path in our search path
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/../../include ${PROJECT_SOURCE_DIR}/../../src)
