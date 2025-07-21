@@ -3,6 +3,7 @@
 #include "unit_test.h"
 #include "gtest/gtest.h"
 #include <fmt/ranges.h>
+#include <iostream>
 
 using namespace Eigen;
 
@@ -62,4 +63,33 @@ TEST(ScaleTransform, processInverse)
     fmt::print("Test error: {}\n", error);
 
     EXPECT_LT(error, 1e-10f);
+}
+
+TEST(ScaleTransform, processASize)
+{
+
+    auto c = ScaleTransformConfiguration::Coefficients();
+    c.nInputs = 2 * 1024 + 1;
+    c.nOutputs = 200;
+    c.indexEnd = 48000 / 2;
+    c.transformType = c.LOGARITHMIC;
+    LogScale algo(c);
+
+    Eigen::ArrayXXf input = Eigen::ArrayXXf::Ones(c.nInputs, 8).abs2();
+    Eigen::ArrayXXf output = algo.initOutput(input);
+
+    fmt::print("Input size: {} x {}\n", input.rows(), input.cols());
+    fmt::print("Output size: {} x {}\n", output.rows(), output.cols());
+    fmt::print("indexEnd: {}\n", algo.indexEnd);
+    fmt::print("Corner indices: {}\n", algo.getCornerIndices());
+    fmt::print("Corner indices size: {}\n", algo.getCornerIndices().size());
+    fmt::print("nSmallBins: {}\n", algo.nSmallBins);
+    fmt::print("indexStart: {}\n", algo.indexStart);
+    fmt::print("nInputsSum: {}\n", algo.nInputsSum);
+    fmt::print("nInputsSum cumulative sum: {}\n", algo.nInputsSum.sum());
+    fmt::print("binsWeight: {}\n", algo.binsWeight);
+
+    algo.process(input, output);
+
+    std::cout << "Output:\n" << output << std::endl;
 }
