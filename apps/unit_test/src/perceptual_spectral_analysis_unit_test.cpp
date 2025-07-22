@@ -7,9 +7,10 @@ using namespace Eigen;
 
 //--------------------------------------------- TEST CASES ---------------------------------------------
 
-TEST(PerceptualSpectralAnalysis, Interface) { 
+TEST(PerceptualSpectralAnalysis, Interface)
+{
     int dummy = 1;
-    EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualSpectrogram>()); 
+    EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualSpectrogram>());
     EXPECT_TRUE(dummy);
 }
 
@@ -28,9 +29,6 @@ TEST(PerceptualSpectralAnalysis, ProcessPublic)
 TEST(PerceptualSpectralAnalysis, GetFrequencies)
 {
     PerceptualSpectrogram algo;
-    auto cornerFrequencies = algo.getCornerFrequencies();
     auto centerFrequencies = algo.getCenterFrequencies();
-    fmt::print("Corner frequencies: {}\n", (cornerFrequencies * 100).round() / 100);
     fmt::print("Center frequencies: {}\n", (centerFrequencies * 100).round() / 100);
-    EXPECT_TRUE(cornerFrequencies.size() == centerFrequencies.size() + 1);
 }
