@@ -13,12 +13,15 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
   public:
     LogScale(Coefficients c = Coefficients()) : BaseAlgorithm{c}
     {
-        float minFreq = 20;                                                  // minimum corner frequency in Hz
-        float freqPerBin = static_cast<float>(c.indexEnd) / (c.nInputs - 1); // frequency difference between two adjacent bins
-        // linear scale from corresponding minFreq to log10(nInputs)
-        Eigen::ArrayXf linLogs = Eigen::ArrayXf::LinSpaced(c.nOutputs, std::log10(1.f + minFreq / freqPerBin), std::log10(static_cast<float>(c.nInputs)));
-        // logarithmic scale from 0 to nInputs-1. Corresponds to index of center bins in the input array (size: nOutputs)
-        Eigen::ArrayXf centerBins = (Eigen::ArrayXf::Constant(c.nOutputs, 10).pow(linLogs) - 1.f);
+        // use double precision in the calculation of centerBins to ensure accuracy in log and pow conversions
+        double freqPerBin = static_cast<double>(c.indexEnd) / (c.nInputs - 1);                                // frequency difference between two adjacent bins
+        double scale = c.transformType == Coefficients::TransformType::LOGARITHMIC ? 1.0 : freqPerBin / 700; // scale = 1 for logarithmic scale, freqPerBin / 700 for Mel scale
+        double minLog = std::log10(1.0 + scale * c.indexStart / freqPerBin);                                 // minimum log value
+        double maxLog = std::log10(1.0 + scale * c.indexEnd / freqPerBin);                                   // maximum log value
+        // linear scale from corresponding indexStart to indexEnd
+        Eigen::ArrayXd linLogs = Eigen::ArrayXd::LinSpaced(c.nOutputs, minLog, maxLog); // linear spaced center indices in logarithmic domain
+        // logarithmic scale corresponding to index of center bins in the input array (size: nOutputs)
+        Eigen::ArrayXf centerBins = linLogs.unaryExpr([&scale](double x) { return (std::pow(10, x) - 1.0)/scale; }).cast<float>();
 
         // count number of output bins that has width smaller or equal to 1 (corresponds to upsampling)
         // these output bins will be calculated using linear interpolation
@@ -50,25 +53,29 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
     InterpolationCubic interpolationCubic;
     DEFINE_MEMBER_ALGORITHMS(interpolationCubic)
 
-    inline void inverse(I::Real2D xPower, O::Real2D yPower)
+    inline void inverse(I::Real2D x, O::Real2D y)
     {
-        // assert(xPower.rows() == C.nOutputs);
+        assert(x.rows() == C.nOutputs);
+        Eigen::ArrayXf indices = getCenterIndices();
+        Eigen::ArrayXf cornerIndices(C.nOutputs + 1);
+        cornerIndices << 0, ((indices.head(C.nOutputs - 1) + indices.tail(C.nOutputs - 1)) / 2).round(), C.nInputs; // corner indices for the output bins
+        Eigen::ArrayXf diff = cornerIndices.tail(C.nOutputs) - cornerIndices.head(C.nOutputs);                       // get difference between adjacent indices
 
-        // for (auto channel = 0; channel < xPower.cols(); channel++)
-        // {
-        //     for (auto i = 0; i < C.nOutputs; i++)
-        //     {
-        //         yPower.block(indexStart(i), channel, nInputsSum(i), 1).setConstant(xPower(i, channel));
-        //     }
-        //     yPower.block(indexEnd, channel, C.nInputs - indexEnd, 1).setConstant(xPower(C.nOutputs - 1, channel));
-        // }
+        for (auto channel = 0; channel < x.cols(); channel++)
+        {
+            for (auto i = 0; i < C.nOutputs; i++)
+            {
+
+                y.col(channel).segment(cornerIndices(i), diff(i)).setConstant(x(i, channel));
+            }
+        }
     }
 
     Eigen::ArrayXf getCenterIndices() const
     {
         Eigen::ArrayXf array(C.nOutputs);
-        array.head(nLinearBins) = indexStart.cast<float>() + fractionLinear; // linear interpolation
-        array.segment(nLinearBins, nCubicBins) = fractionCubic; // cubic interpolation
+        array.head(nLinearBins) = indexStart.cast<float>() + fractionLinear;           // linear interpolation
+        array.segment(nLinearBins, nCubicBins) = fractionCubic;                        // cubic interpolation
         array.segment(nLinearBins + nCubicBins, nTriangularBins) = fractionTriangular; // triangular interpolation
         return array;
     }
@@ -99,27 +106,31 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
                 int iStart = std::ceil(fractionTriangular(i) - distanceTriangular(i));
                 int iMid = std::ceil(fractionTriangular(i));
                 int iEnd = std::ceil(fractionTriangular(i) + distanceTriangular(i + 1));
-                output(i + nLinearBins + nCubicBins, channel) = -10000; // initialize to a very low value
+                float dist = iMid - iStart;
+                output(i + nLinearBins + nCubicBins, channel) = input(iMid, channel); // initialize to iMid since it always has full weight
                 for (auto iBin = iStart; iBin < iMid; iBin++)
                 {
-                    float weightdB = energy2dB(1.f - (fractionTriangular(i) - iBin) / distanceTriangular(i));
+                    float weightdB = energy2dB(1.f - (iMid - iBin) / dist);
                     output(i + nLinearBins + nCubicBins, channel) = std::max(output(i + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
                 }
-                for (auto iBin = iMid; iBin < iEnd; iBin++)
+                dist = iEnd - iMid;
+                for (auto iBin = iMid + 1; iBin < iEnd; iBin++)
                 {
-                    float weightdB = energy2dB(1.f - (iBin - fractionTriangular(i)) / distanceTriangular(i + 1));
+                    float weightdB = energy2dB(1.f - (iBin - iMid) / dist);
                     output(i + nLinearBins + nCubicBins, channel) = std::max(output(i + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
                 }
             }
             int iStart = std::ceil(fractionTriangular(nTriangularBins - 1) - distanceTriangular(nTriangularBins - 1));
             int iMid = std::ceil(fractionTriangular(nTriangularBins - 1));
-            output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) = -10000; // initialize to a very low value
+            float dist = iMid - iStart;
+            output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) = input(iMid, channel); // initialize to iMid since it always has full weight
             for (auto iBin = iStart; iBin < iMid; iBin++)
             {
-                float weightdB = energy2dB(1.f - (fractionTriangular(nTriangularBins - 1) - iBin) / distanceTriangular(nTriangularBins - 1));
+                float weightdB = energy2dB(1.f - (iMid - iBin) / dist);
                 output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) =
                     std::max(output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
             }
+            
         }
     }
 

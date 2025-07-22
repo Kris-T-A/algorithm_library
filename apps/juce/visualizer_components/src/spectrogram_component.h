@@ -1,5 +1,5 @@
 #pragma once
-#include "algorithm_library/mel_scale.h"
+#include "algorithm_library/log_scale.h"
 #include "algorithm_library/spectrogram.h"
 #include "utilities/fastonebigheader.h"
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -13,7 +13,7 @@ class SpectrogramComponent : public juce::Component, juce::Timer
         : sampleRate(sampleRateNew), nFramesOut(8), bufferSize(getBufferSize(sampleRate)), nBands(getNBands(bufferSize)), nMels(getNMels(sampleRate)),
           scalePlot(16000.f / (bufferSize * bufferSize)),
           spectrogram({.bufferSize = bufferSize, .nBands = nBands, .algorithmType = SpectrogramConfiguration::Coefficients::ADAPTIVE_HANN_8}),
-          melScale({.nMels = nMels, .nBands = nBands, .sampleRate = sampleRate}),
+          LogScale({.nMels = nMels, .nBands = nBands, .sampleRate = sampleRate}),
           spectrogramImage(juce::Image::RGB, nSpectrogramFrames, nMels, true, juce::SoftwareImageType())
     {
         circularBuffer = Eigen::ArrayXf::Zero(getcircularBufferSize(bufferSize, sampleRate));
@@ -42,11 +42,11 @@ class SpectrogramComponent : public juce::Component, juce::Timer
             c.nBands = nBands;
             spectrogram.setCoefficients(c);
 
-            auto cMel = melScale.getCoefficients();
-            cMel.nBands = nBands;
-            cMel.nMels = nMels;
-            cMel.sampleRate = sampleRate;
-            melScale.setCoefficients(cMel);
+            auto cLog = LogScale.getCoefficients();
+            cLog.nBands = nBands;
+            cLog.nMels = nMels;
+            cLog.sampleRate = sampleRate;
+            LogScale.setCoefficients(cLog);
 
             spectrogramOut = Eigen::ArrayXXf::Zero(nBands, nFramesOut);
             bufferIn = Eigen::ArrayXf::Zero(bufferSize);
@@ -119,7 +119,7 @@ class SpectrogramComponent : public juce::Component, juce::Timer
             if (startIndex >= circularBuffer.size()) { startIndex -= sizeCircularBuffer; }
 
             spectrogram.process(bufferIn, spectrogramOut);
-            melScale.process(spectrogramOut, spectrogramMel);
+            LogScale.process(spectrogramOut, spectrogramMel);
             for (auto iFrameOut = 0; iFrameOut < nFramesOut; iFrameOut++)
             {
                 for (auto y = 1; y < nMels; ++y)
@@ -167,7 +167,7 @@ class SpectrogramComponent : public juce::Component, juce::Timer
     std::atomic<int> writeBufferIndex;
     std::atomic<int> readBufferIndex;
     Spectrogram spectrogram;
-    MelScale melScale;
+    LogScale logScale;
     Eigen::ArrayXf bufferIn;
     Eigen::ArrayXXf spectrogramOut;
     Eigen::ArrayXXf spectrogramMel;

@@ -25,7 +25,7 @@
 #include "noise_reduction/noise_reduction_ml.h"
 #include "normal3d/normal3d_diff.h"
 #include "preprocessing_path/beamformer_path.h"
-#include "scale_transform/mel_scale.h"
+#include "scale_transform/log_scale.h"
 #include "single_channel_path/noise_reduction_path.h"
 #include "solver_toeplitz/solver_toeplitz_system.h"
 #include "spectral_compressor/spectral_compressor_adaptive.h"
@@ -88,7 +88,7 @@ DEFINE_BENCHMARK_ALGORITHM(StreamingMinMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMinLemire)
 DEFINE_BENCHMARK_ALGORITHM(DCRemoverFirstOrder)
-DEFINE_BENCHMARK_ALGORITHM(MelScale)
+DEFINE_BENCHMARK_ALGORITHM(LogScale)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionFusedNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(GainCalculationApriori)
