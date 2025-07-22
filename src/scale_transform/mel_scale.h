@@ -11,14 +11,12 @@ class MelScale : public AlgorithmImplementation<ScaleTransformConfiguration, Mel
   public:
     MelScale(Coefficients c = Coefficients()) : BaseAlgorithm{c}
     {
-        float highFreqMel = 2595 * std::log10(1 + (c.indexEnd) / 700);                                    // convert Hz to Mel
-        Eigen::ArrayXf mels = Eigen::ArrayXf::LinSpaced(c.nOutputs + 1, 0, highFreqMel);                  // linear spaced corner indices in Mel domain
-        Eigen::ArrayXf freqs = 700 * (Eigen::ArrayXf::Constant(c.nOutputs + 1, 10).pow(mels / 2595) - 1); // convert Mel to Hz
-        Eigen::ArrayXi cornerBins = ((c.nInputs - 1) / c.indexEnd * freqs)
-                                        .round()
-                                        .cast<int>(); // corner bins, including 0 and nInputs. Use round() instead of floor() to ensure increasing mel bin sizes
-        indexStart = cornerBins.head(c.nOutputs);
-        nInputsSum = (cornerBins.segment(1, c.nOutputs) - indexStart).cwiseMax(1);
+        float highFreqMel = 2595 * std::log10(1 + (c.indexEnd) / 700);                                // convert Hz to Mel
+        Eigen::ArrayXf mels = Eigen::ArrayXf::LinSpaced(c.nOutputs, 0, highFreqMel);                  // linear spaced center indices in Mel domain
+        Eigen::ArrayXf freqs = 700 * (Eigen::ArrayXf::Constant(c.nOutputs, 10).pow(mels / 2595) - 1); // convert Mel to Hz
+        Eigen::ArrayXi centerBins = ((c.nInputs - 1) / c.indexEnd * freqs).cast<int>();               // center bins.
+        indexStart = centerBins;
+        nInputsSum = (centerBins.segment(1, c.nOutputs) - indexStart).cwiseMax(1);
         indexEnd = indexStart(c.nOutputs - 1) + nInputsSum(c.nOutputs - 1);
     }
 
@@ -38,7 +36,7 @@ class MelScale : public AlgorithmImplementation<ScaleTransformConfiguration, Mel
     }
 
     // Indices corresponds to frequencies if indexEnd is half the sample rate
-    Eigen::ArrayXf getCornerIndices() const
+    Eigen::ArrayXf getCenterIndices() const
     {
         Eigen::ArrayXf array(C.nOutputs + 1);
         array.head(C.nOutputs) = indexStart.cast<float>();

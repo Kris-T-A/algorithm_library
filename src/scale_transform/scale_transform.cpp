@@ -13,10 +13,16 @@ void Algorithm<ScaleTransformConfiguration>::setImplementation(const Coefficient
 
 ScaleTransform::ScaleTransform(const Coefficients &c) : Algorithm<ScaleTransformConfiguration>(c) {}
 
-Eigen::ArrayXf ScaleTransform::getCornerIndices() const
+Eigen::ArrayXf ScaleTransform::getCenterIndices() const
 {
-    if (getCoefficients().transformType == Coefficients::MEL) { return static_cast<MelScaleImpl *>(pimpl.get())->algo.getCornerIndices(); }
-    else { return static_cast<LogScaleImpl *>(pimpl.get())->algo.getCornerIndices(); }
+    if (getCoefficients().transformType == Coefficients::MEL) { return static_cast<MelScaleImpl *>(pimpl.get())->algo.getCenterIndices(); }
+    else { return static_cast<LogScaleImpl *>(pimpl.get())->algo.getCenterIndices(); }
+}
+
+Eigen::ArrayXf ScaleTransform::getCenterFrequencies() const
+{
+    if (getCoefficients().transformType == Coefficients::MEL) { return static_cast<MelScaleImpl *>(pimpl.get())->algo.getCenterFrequencies(); }
+    else { return static_cast<LogScaleImpl *>(pimpl.get())->algo.getCenterFrequencies(); }
 }
 
 void ScaleTransform::inverse(I::Real2D input, O::Real2D output)
