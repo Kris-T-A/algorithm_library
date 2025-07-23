@@ -102,8 +102,8 @@ int main(int argc, char **argv)
     auto start = std::chrono::high_resolution_clock::now();
     spectrogramProcess(&audioFileInput.samples[0][0], sampleRate, spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
     auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Execution time: " << duration.count() / 1000000.f << " seconds" << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Execution time: " << duration.count() / 1000.f << " seconds" << std::endl;
 
     std::cout << "Processing spectrogram adaptive zeropad...\n";
     spectrogramOutputName = outputSplit[0] + "_spectrogram_adaptive_zeropad." + outputSplit[1];
@@ -111,8 +111,8 @@ int main(int argc, char **argv)
     start = std::chrono::high_resolution_clock::now();
     spectrogramAdaptiveZeropadProcess(&audioFileInput.samples[0][0], sampleRate, spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
     stop = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Execution time: " << duration.count() / 1000000.f << " seconds" << std::endl;
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Execution time: " << duration.count() / 1000.f << " seconds" << std::endl;
 
     std::cout << "DONE!\n" << std::endl;
 
