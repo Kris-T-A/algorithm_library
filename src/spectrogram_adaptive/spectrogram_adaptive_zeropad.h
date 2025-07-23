@@ -40,9 +40,29 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
             spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled.resize(c.nBands, nOutputFrames);
-        minEnvelope.resize(spectrogramOut[2].rows());
-        maxEnvelope.resize(spectrogramOut[2].rows());
-        weight.resize(spectrogramOut[2].rows(), spectrogramOut[2].cols() + 1);
+
+        // calculate the index of the spectrogram that has the closest frame size to the desired envelope frame size
+        indexEnvelope = [&]() {
+            const int desiredEnvelopeFrameSize = 0.064 * c.sampleRate; // 64 ms envelope
+            int frameSize = FFTConfiguration::convertNBandsToFFTSize(c.nBands);
+            float dist = std::abs(frameSize - desiredEnvelopeFrameSize);
+            int indexEnvelope = 0;
+            for (auto i = 1; i < c.nSpectrograms; i++)
+            {
+                frameSize /= 2;
+                float distNew = std::abs(frameSize - desiredEnvelopeFrameSize);
+                if (distNew < dist)
+                {
+                    dist = distNew;
+                    indexEnvelope = i;
+                }
+            }
+            return indexEnvelope;
+        }();
+
+        minEnvelope.resize(spectrogramOut[indexEnvelope].rows());
+        maxEnvelope.resize(spectrogramOut[indexEnvelope].rows());
+        weight.resize(spectrogramOut[indexEnvelope].rows(), spectrogramOut[indexEnvelope].cols() + 1);
         weightUpscaled.resize(c.nBands, nOutputFrames);
 
         resetVariables();
@@ -74,12 +94,12 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
             output = output.min(spectrogramUpscaled);
         }
 
-        for (auto iFrame = 0; iFrame < spectrogramOut[2].cols() + 1; iFrame++)
+        for (auto iFrame = 0; iFrame < spectrogramOut[indexEnvelope].cols() + 1; iFrame++)
         {
-            filterMinMax.process(spectrogramRaw[2].col(iFrame), {minEnvelope, maxEnvelope});
-            weight.col(iFrame) = ((spectrogramRaw[2].col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
+            filterMinMax.process(spectrogramRaw[indexEnvelope].col(iFrame), {minEnvelope, maxEnvelope});
+            weight.col(iFrame) = ((spectrogramRaw[indexEnvelope].col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
         }
-        upscale[2].process(weight, weightUpscaled);
+        upscale[indexEnvelope].process(weight, weightUpscaled);
 
         // Here spectrogramUpscaled contains the upscaled spectrogram of the smallest frame size
         weightUpscaled = weightUpscaled.min(1.f - ((spectrogramUpscaled - output - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
@@ -111,6 +131,7 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
     }
 
     int nOutputFrames;
+    int indexEnvelope;
     std::vector<Eigen::ArrayXXf> spectrogramOut;
     std::vector<Eigen::ArrayXXf> spectrogramRaw;
     Eigen::ArrayXXf spectrogramUpscaled;
