@@ -1,6 +1,7 @@
 #pragma once
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "save_spectrogram.h"
+#include "rescale_spectrogram.h"
 
 void spectrogramAdaptiveZeropadProcess(const float* inputPtr, float sampleRate, const std::string &outputName, int bufferSize, int nBands, int nFolds, int nonlinearity, int nFrames)
 {
