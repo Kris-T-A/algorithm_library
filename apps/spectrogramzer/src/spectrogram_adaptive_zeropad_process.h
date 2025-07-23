@@ -2,7 +2,7 @@
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "save_spectrogram.h"
 
-void spectrogramAdaptiveZeropadProcess(const float* inputPtr, const std::string &outputName, int bufferSize, int nBands, int nFolds, int nonlinearity, int nFrames)
+void spectrogramAdaptiveZeropadProcess(const float* inputPtr, float sampleRate, const std::string &outputName, int bufferSize, int nBands, int nFolds, int nonlinearity, int nFrames)
 {
 
     auto c = SpectrogramAdaptiveConfiguration::Coefficients();
@@ -24,6 +24,9 @@ void spectrogramAdaptiveZeropadProcess(const float* inputPtr, const std::string 
         spectrogram.process(input.segment(iFrame * bufferSize, bufferSize), spec.middleCols(iFrame * 8, 8));
     }
 
+    // rescale the spectrogram to a 16:9 aspect ratio
+    spec = rescaleSpectrogram(spec, sampleRate);
+    
     // save the spectrogram
     saveSpectrogram(spec, outputName);
 }

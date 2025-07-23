@@ -4,6 +4,7 @@
 #include <iostream>
 #include "spectrogram_process.h"
 #include "spectrogram_adaptive_zeropad_process.h"
+#include <chrono>
 
 using namespace Eigen;
 using namespace Pyplotcpp;
@@ -75,12 +76,14 @@ int main(int argc, char **argv)
     audioFileInput.printSummary();
     std::cout << "\n";
 
+    float sampleRate = audioFileInput.getSampleRate();
+
     auto outputSplit = split(outputName, '.');
 
     std::cout << "Processing summary:\n";
-    int bufferSize = static_cast<int>(hopSizeMilliseconds / 1000.f * audioFileInput.getSampleRate());
+    int bufferSize = static_cast<int>(hopSizeMilliseconds / 1000.f * sampleRate);
     std::cout << "Buffer size: " << bufferSize << "\n";
-    float fftSize = spectrumSizeMilliseconds / 1000.f * audioFileInput.getSampleRate();
+    float fftSize = spectrumSizeMilliseconds / 1000.f * sampleRate;
     fftSize = FFTConfiguration::getValidFFTSize(fftSize);
     std::cout << "FFT size: " << fftSize << "\n";
     int nBands = FFTConfiguration::convertFFTSizeToNBands(fftSize);
@@ -96,11 +99,20 @@ int main(int argc, char **argv)
 
     std::cout << "Processing spectrogram...\n";
     std::string spectrogramOutputName = outputSplit[0] + "_spectrogram." + outputSplit[1];
-    spectrogramProcess(&audioFileInput.samples[0][0], spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+    auto start = std::chrono::high_resolution_clock::now();
+    spectrogramProcess(&audioFileInput.samples[0][0], sampleRate, spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "Execution time: " << duration.count() / 1000000.f << " seconds" << std::endl;
 
     std::cout << "Processing spectrogram adaptive zeropad...\n";
     spectrogramOutputName = outputSplit[0] + "_spectrogram_adaptive_zeropad." + outputSplit[1];
-    spectrogramAdaptiveZeropadProcess(&audioFileInput.samples[0][0], spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+
+    start = std::chrono::high_resolution_clock::now();
+    spectrogramAdaptiveZeropadProcess(&audioFileInput.samples[0][0], sampleRate, spectrogramOutputName, bufferSize, nBands, nFolds, nonlinearity, nFrames);
+    stop = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "Execution time: " << duration.count() / 1000000.f << " seconds" << std::endl;
 
     std::cout << "DONE!\n" << std::endl;
 

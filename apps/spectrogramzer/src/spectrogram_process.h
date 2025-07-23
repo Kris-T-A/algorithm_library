@@ -1,8 +1,9 @@
 #pragma once
 #include "algorithm_library/spectrogram.h"
 #include "save_spectrogram.h"
+#include "rescale_spectrogram.h"
 
-void spectrogramProcess(const float* inputPtr, const std::string &outputName, int bufferSize, int nBands, int nFolds, int nonlinearity, int nFrames)
+void spectrogramProcess(const float* inputPtr, float sampleRate, const std::string &outputName, int bufferSize, int nBands, int nFolds, int nonlinearity, int nFrames)
 {
 
     auto c = Spectrogram::Coefficients();
@@ -26,7 +27,9 @@ void spectrogramProcess(const float* inputPtr, const std::string &outputName, in
 
     // convert to dB scale
     spec = 10.f * spec.max(1e-20).log10();
-
+    
+    // rescale the spectrogram to a 16:9 aspect ratio
+    spec = rescaleSpectrogram(spec, sampleRate);
     // save the spectrogram
     saveSpectrogram(spec, outputName);
 }
