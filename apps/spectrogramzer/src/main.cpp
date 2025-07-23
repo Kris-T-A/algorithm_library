@@ -1,10 +1,10 @@
 #include "AudioFile.h"
+#include "spectrogram_adaptive_zeropad_process.h"
+#include "spectrogram_process.h"
 #include <algorithm_library/fft.h>
+#include <chrono>
 #include <cxxopts.hpp>
 #include <iostream>
-#include "spectrogram_process.h"
-#include "spectrogram_adaptive_zeropad_process.h"
-#include <chrono>
 
 using namespace Eigen;
 using namespace Pyplotcpp;
@@ -16,17 +16,19 @@ constexpr int VERSION_PATCH = 0;
 
 // split a string by a delimiter
 // This function is used to split the output file name into file name and extension
-std::vector<std::string> split(const std::string& str, char delimiter) {
+std::vector<std::string> split(const std::string &str, char delimiter)
+{
     std::vector<std::string> tokens;
     size_t start = 0;
     size_t end = str.find(delimiter);
-    
-    while (end != std::string::npos) {
+
+    while (end != std::string::npos)
+    {
         tokens.push_back(str.substr(start, end - start));
         start = end + 1;
         end = str.find(delimiter, start);
     }
-    
+
     tokens.push_back(str.substr(start));
     return tokens;
 }
@@ -72,6 +74,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if (hopSizeMilliseconds <= 0 || spectrumSizeMilliseconds <= 0 || hopSizeMilliseconds >= spectrumSizeMilliseconds)
+    {
+        std::cout << "Spectrum size: " << spectrumSizeMilliseconds << " ms, Hop size: " << hopSizeMilliseconds << " ms" << std::endl;
+        std::cerr << "Error: Hop size and spectrum size must be positive values and spectrum size must be larger than hop size." << std::endl;
+        return 1;
+    }
+
     std::cout << "Input file summary:\n";
     audioFileInput.printSummary();
     std::cout << "\n";
@@ -91,9 +100,8 @@ int main(int argc, char **argv)
     int nFrames = audioFileInput.getNumSamplesPerChannel() / bufferSize;
     std::cout << "Number of frames: " << nFrames << "\n";
 
-    int nFolds = 1; // no overlap
+    int nFolds = 1;       // no overlap
     int nonlinearity = 0; // no nonlinearity
-
 
     std::cout << "Processing audio file...\n";
 
