@@ -21,6 +21,7 @@
 #include "algorithm_library/solver_toeplitz.h"
 #include "algorithm_library/spectrogram.h"
 #include "algorithm_library/spline.h"
+#include "algorithm_library/spectrogram_adaptive.h"
 
 #include "pfr.hpp"
 #include "pybind11_json/pybind11_json.hpp"
@@ -220,7 +221,7 @@ PYBIND11_MODULE(PythonAlgorithmLibrary, m)
     DEFINE_PYTHON_INTERFACE(Normal3d);
     DEFINE_PYTHON_INTERFACE(SolverToeplitz);
     DEFINE_PYTHON_INTERFACE(Spectrogram) //
-        .def("getNFrames", [](Spectrogram &algo, int inputSize, int bufferSize) { return Spectrogram::Configuration::getNFrames(inputSize, bufferSize); });
+        .def("getValidFFTSize", [](Spectrogram &algo, int fftSize) { return Spectrogram::Configuration::getValidFFTSize(fftSize); });
     DEFINE_PYTHON_INTERFACE(Spline);
     DEFINE_PYTHON_INTERFACE(DCRemover);
     DEFINE_PYTHON_INTERFACE(ActivityDetection);
@@ -243,4 +244,5 @@ PYBIND11_MODULE(PythonAlgorithmLibrary, m)
         .def("setUserDefinedSosFilter", [](IIRFilterCascadeTimeVarying &algo, I::Real2D sos) { return algo.setUserDefinedSosFilter(sos); });
     DEFINE_PYTHON_INTERFACE(SingleChannelPath);
     DEFINE_PYTHON_INTERFACE(NoiseReduction);
+    DEFINE_PYTHON_INTERFACE(SpectrogramAdaptive);
 }
