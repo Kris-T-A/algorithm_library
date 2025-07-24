@@ -15,7 +15,7 @@ struct SpectrogramAdaptiveConfiguration
     {
         int bufferSize = 1024;    // buffer size
         int nBands = 2049;        // number of frequency bands in the first filterbank
-        int nSpectrograms = 4;    // each spectrogram halves the buffer size, so output contains 2^(nSpectrograms-1) frames
+        int nSpectrograms = 3;    // each spectrogram halves the buffer size, so output contains 2^(nSpectrograms-1) frames
         int nFolds = 1;           // number of folds: frameSize = nFolds * 2 * (nBands - 1)
         int nonlinearity = 0;     // nonlinearity factor where left/right side of window is reduced by a factor of 2^nonlinearity, 0 = no nonlinearity
         float sampleRate = 16000; // sample rate in Hz
