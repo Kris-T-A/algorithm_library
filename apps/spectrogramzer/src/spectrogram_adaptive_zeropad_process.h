@@ -7,6 +7,7 @@ void spectrogramAdaptiveZeropadProcess(const float* inputPtr, float sampleRate, 
 {
 
     auto c = SpectrogramAdaptiveConfiguration::Coefficients();
+    c.nSpectrograms = 4;
     c.bufferSize = bufferSize;
     c.nBands = nBands;
     c.nFolds = nFolds;

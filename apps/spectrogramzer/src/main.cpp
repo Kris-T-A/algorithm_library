@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     std::cout << "Number of frames: " << nFrames << "\n";
 
     int nFolds = 1;       // no overlap
-    int nonlinearity = 0; // no nonlinearity
+    int nonlinearity = 1; // no nonlinearity
 
     std::cout << "Processing audio file...\n";
 
