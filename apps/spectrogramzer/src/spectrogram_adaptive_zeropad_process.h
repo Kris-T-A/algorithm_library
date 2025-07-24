@@ -7,7 +7,7 @@ void spectrogramAdaptiveZeropadProcess(const float* inputPtr, float sampleRate, 
 {
 
     auto c = SpectrogramAdaptiveConfiguration::Coefficients();
-    c.nSpectrograms = 4;
+    c.nSpectrograms = 3;
     c.bufferSize = bufferSize;
     c.nBands = nBands;
     c.nFolds = nFolds;
@@ -18,12 +18,13 @@ void spectrogramAdaptiveZeropadProcess(const float* inputPtr, float sampleRate, 
     Eigen::Map<const Eigen::ArrayXf> input(inputPtr, bufferSize * nFrames);
 
     // Allocate output matrix
-    Eigen::ArrayXXf spec(nBands, nFrames * 8);
+    const int nOutputFrames = positivePow2(c.nSpectrograms - 1);
+    Eigen::ArrayXXf spec(nBands, nFrames * nOutputFrames);
 
     // Process the audio file
     for (int iFrame = 0; iFrame < nFrames; iFrame++)
     {
-        spectrogram.process(input.segment(iFrame * bufferSize, bufferSize), spec.middleCols(iFrame * 8, 8));
+        spectrogram.process(input.segment(iFrame * bufferSize, bufferSize), spec.middleCols(iFrame * nOutputFrames, nOutputFrames));
     }
 
     // rescale the spectrogram to a 16:9 aspect ratio
