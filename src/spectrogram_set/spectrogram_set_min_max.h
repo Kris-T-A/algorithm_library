@@ -77,12 +77,12 @@ class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMax
         nBuffers[0] = 1;
         bufferSizes[0] = C.bufferSize;
         float winScale = spectrograms[0].filterbanks[0].getWindow().sum();
-        Eigen::ArrayXf window = spectrograms[0].filterbanks[1].getWindow();
-        window *= winScale / window.sum();
-        spectrograms[0].filterbanks[1].setWindow(window);
-        window = spectrograms[0].filterbanks[2].getWindow();
-        window *= winScale / window.sum();
-        spectrograms[0].filterbanks[2].setWindow(window);
+        for (auto iFB = 0; iFB < static_cast<int>(spectrograms[0].filterbanks.size()); iFB++)
+        {
+            Eigen::ArrayXf window = spectrograms[0].filterbanks[iFB].getWindow();
+            window *= winScale / window.sum();
+            spectrograms[0].filterbanks[iFB].setWindow(window);
+        }
 
         for (auto iSG = 1; iSG < C.nSpectrograms; iSG++)
         {
