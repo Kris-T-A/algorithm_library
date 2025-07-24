@@ -13,7 +13,7 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
 {
   public:
     SpectrogramAdaptiveZeropad(Coefficients c = Coefficients())
-        : BaseAlgorithm{c}, spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds}), upscale([&c]() {
+        : BaseAlgorithm{c}, spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}), upscale([&c]() {
               std::vector<Upscale2DLinear::Coefficients> cUpscale(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
               {
