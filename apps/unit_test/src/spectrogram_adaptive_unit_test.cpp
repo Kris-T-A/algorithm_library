@@ -22,6 +22,7 @@ TEST(SpectrogramAdaptive, getNFrames)
 {
     SpectrogramAdaptive spec;
     auto c = spec.getCoefficients();
+    const int noutputFrames = positivePow2(c.nSpectrograms - 1); // 2^(nSpectrograms-1) frames
     const int bufferSize = c.bufferSize;
     const int nFrames = 10;
     const int nSamples = bufferSize * nFrames;
@@ -29,14 +30,14 @@ TEST(SpectrogramAdaptive, getNFrames)
     ArrayXf signal(nSamples);
     signal.setRandom();
 
-    ArrayXXf output(c.nBands, 8 * nFrames + 1); // add one extra frame than needed
+    ArrayXXf output(c.nBands, noutputFrames * nFrames + 1); // add one extra frame than needed
     output.setZero();                           // important to set to zero, since we are checking last frame is zero in success criteria
     for (auto frame = 0; frame < nFrames; frame++)
     {
-        spec.process(signal.segment(frame * bufferSize, bufferSize), output.middleCols(8 * frame, 8));
+        spec.process(signal.segment(frame * bufferSize, bufferSize), output.middleCols(noutputFrames * frame, noutputFrames));
     }
 
-    bool criteria = (!output.leftCols(8 * nFrames).isZero()) && (output.rightCols(1).isZero()); // test criteria that all nFrames are non-zero and last frame is zero
+    bool criteria = (!output.leftCols(noutputFrames * nFrames).isZero()) && (output.rightCols(1).isZero()); // test criteria that all nFrames are non-zero and last frame is zero
     fmt::print("Criteria: {}\n", criteria);
     EXPECT_TRUE(criteria);
 }
