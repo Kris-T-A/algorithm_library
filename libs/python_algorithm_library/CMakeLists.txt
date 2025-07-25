@@ -29,7 +29,7 @@ cpmaddpackage(NAME pybind11 GITHUB_REPOSITORY pybind/pybind11 GIT_TAG origin/mas
 cpmaddpackage(NAME pybind11_json GITHUB_REPOSITORY pybind/pybind11_json GIT_TAG origin/master)
 
 # add pfr non-boost library
-cpmaddpackage(NAME boost_pfr GITHUB_REPOSITORY apolukhin/pfr_non_boost GIT_TAG origin/master)
+cpmaddpackage(NAME pfr GITHUB_REPOSITORY apolukhin/pfr_non_boost GIT_TAG origin/master)
 
 find_package(
   Python
@@ -63,14 +63,15 @@ if(MSVC)
                                                                                  # "C4127": conditional expression is constant, "C4459": Suppress 'declaration of 'var' hides
                                                                                  # global declaration'
 else() # on GCC increase warning level
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wno-unused-parameter -ffast-math") # "no-unused-parameter": suppress unused parameter warning from 3rd party
+# removed -Wextra flag since it resulted in a "maybe-uninitialized" error from pybind11 in release mode using gcc 13.3.0
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-unused-parameter -ffast-math") # "no-unused-parameter": suppress unused parameter warning from 3rd party
                                                                                                     # libraries
 endif()
 
 # All users of this library will need at least C++17
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC AlgorithmLibrary pybind11_json boost_pfr)
+target_link_libraries(${PROJECT_NAME} PUBLIC AlgorithmLibrary pybind11_json pfr)
 
 file(GLOB_RECURSE SOURCE_LIST_PYTHON CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/python_script/*.py")
 
