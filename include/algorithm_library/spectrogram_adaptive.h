@@ -31,14 +31,14 @@ struct SpectrogramAdaptiveConfiguration
 
     static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c)
     {
-        return Eigen::ArrayXXf::Constant(c.nBands, 1 << (c.nSpectrograms - 1), -200);
+        return Eigen::ArrayXXf::Constant(c.nBands, 1ull << (c.nSpectrograms - 1), -200);
     } // output spectrogram in dB
 
     static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && input.allFinite(); }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        return ((output.rows() == c.nBands) && (output.cols() == (1 << (c.nSpectrograms - 1))) && output.allFinite());
+        return ((output.rows() == c.nBands) && (output.cols() == (1LL << (c.nSpectrograms - 1))) && output.allFinite());
     }
 };
 

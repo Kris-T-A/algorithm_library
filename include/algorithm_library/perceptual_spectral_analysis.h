@@ -33,14 +33,14 @@ struct PerceptualSpectralAnalysisConfiguration
 
     static Eigen::ArrayXXf initOutput(Input input, const Coefficients &c) // perceptual spectral analysis output
     {
-        return Eigen::ArrayXXf::Zero(c.nBands, (1 << (c.nSpectrograms - 1)));
+        return Eigen::ArrayXXf::Zero(c.nBands, (1uLL << (c.nSpectrograms - 1)));
     }
 
     static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.bufferSize) && input.allFinite(); }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        return (output.rows() == c.nBands) && (output.cols() == (1 << (c.nSpectrograms - 1))) && output.allFinite();
+        return (output.rows() == c.nBands) && (output.cols() == (1LL << (c.nSpectrograms - 1))) && output.allFinite();
     }
 };
 
