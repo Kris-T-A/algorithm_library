@@ -95,10 +95,10 @@ class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMax
         }
     }
 
-    void setReducedWindow(int nSpectrogram, int nFilterbank, int stride, int winScale)
+    void setReducedWindow(int nSpectrogram, int nFilterbank, int stride, float winScale)
     {
         Eigen::ArrayXf window = spectrograms[nSpectrogram].filterbanks[nFilterbank].getWindow();
-        int winSize = window.size();
+        auto winSize = static_cast<int>(window.size());
         Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Zero(winSize); // create a zeroed array of the same size as the original window
         int winSmallSize = winSize / stride;
         windowSmall.segment((winSize - winSmallSize) / 2, winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
