@@ -113,7 +113,9 @@ else() # on GCC/CLANG increase warning level
   if(COMPILER_SUPPORT_Wno-psabi)
     target_compile_options(${PROJECT_NAME} PUBLIC -Wno-psabi) # ignore warning about ABI changes in std::complex since GCC 4.4. You can ignore it if you aren't mixing binaries before and after GCC 4.4.
   endif()
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Werror -Wextra -Wno-unused-parameter) # "no-unused-parameter": suppress unused parameter warning
+  if (ALGORITHM_LIBRARY_POSITION_INDEPENDENT_CODE)
+    target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
+  endif()
   #target_compile_options(${PROJECT_NAME} PRIVATE -ffast-math) # uncommented since it has very little effect on google benchmark execution time results and it effects the numerical results
 endif()
 

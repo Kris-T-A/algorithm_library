@@ -19,7 +19,7 @@ set(ENV{CPM_SOURCE_CACHE} ${PROJECT_SOURCE_DIR}/../../extern)
 include(../../cmake/CPM.cmake)
 
 # add algorithm_library
-cpmaddpackage(NAME AlgorithmLibrary SOURCE_DIR ${PROJECT_SOURCE_DIR}/../.. OPTIONS "ALGORITHM_LIBRARY_SHARED_LIBRARY" # build as shared library
+cpmaddpackage(NAME AlgorithmLibrary SOURCE_DIR ${PROJECT_SOURCE_DIR}/../.. OPTIONS ALGORITHM_LIBRARY_POSITION_INDEPENDENT_CODE # build using -fPIC flag
 )
 
 # add pybind11 library
