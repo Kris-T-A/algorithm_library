@@ -9,10 +9,10 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
-class SpectrogramAdaptiveMinMax : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveMinMax>
+class SpectrogramAdaptiveUpscale : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveUpscale>
 {
   public:
-    SpectrogramAdaptiveMinMax(Coefficients c = Coefficients())
+    SpectrogramAdaptiveUpscale(Coefficients c = Coefficients())
         : BaseAlgorithm{c}, spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds}), upscale([&c]() {
               std::vector<Upscale2DLinear::Coefficients> cUpscale(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
