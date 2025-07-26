@@ -3,7 +3,7 @@
 #include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 #include "spectrogram_adaptive/upscale2d_linear.h"
-#include "spectrogram_set/spectrogram_set_min_max.h"
+#include "spectrogram_set/spectrogram_set_zeropad.h"
 #include "utilities/fastonebigheader.h"
 
 // Adaptive Spectrogram
@@ -13,7 +13,9 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
 {
   public:
     SpectrogramAdaptiveZeropad(Coefficients c = Coefficients())
-        : BaseAlgorithm{c}, spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}), upscale([&c]() {
+        : BaseAlgorithm{c},
+          spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+          upscale([&c]() {
               std::vector<Upscale2DLinear::Coefficients> cUpscale(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
               {
@@ -48,7 +50,7 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
         resetVariables();
     }
 
-    SpectrogramSetMinMax spectrogramSet;
+    SpectrogramSetZeropad spectrogramSet;
     VectorAlgo<Upscale2DLinear> upscale;
     FilterMinMaxLemire filterMinMax;
     DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, filterMinMax)
@@ -80,7 +82,8 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
             weight = ((output.col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
 
             // Here spectrogramUpscaled contains the upscaled spectrogram of the smallest frame size
-            weight = weight.min(1.f - ((spectrogramUpscaled.col(iFrame) - output.col(iFrame) - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
+            weight = weight.min(
+                1.f - ((spectrogramUpscaled.col(iFrame) - output.col(iFrame) - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
             output.col(iFrame) += weight * (spectrogramUpscaled.col(iFrame) - output.col(iFrame));
         }
     }

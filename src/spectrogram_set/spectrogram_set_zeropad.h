@@ -9,7 +9,7 @@
 //
 // author: Kristian Timm Andersen
 
-struct SpectrogramSetMinMaxConfiguration
+struct SpectrogramSetZeropadConfiguration
 {
     using Input = I::Real;
     using Output = O::VectorReal2D;
@@ -56,10 +56,10 @@ struct SpectrogramSetMinMaxConfiguration
     }
 };
 
-class SpectrogramSetMinMax : public AlgorithmImplementation<SpectrogramSetMinMaxConfiguration, SpectrogramSetMinMax>
+class SpectrogramSetZeropad : public AlgorithmImplementation<SpectrogramSetZeropadConfiguration, SpectrogramSetZeropad>
 {
   public:
-    SpectrogramSetMinMax(Coefficients c = Coefficients())
+    SpectrogramSetZeropad(Coefficients c = Coefficients())
         : BaseAlgorithm{c}, spectrograms([&c]() {
               std::vector<SpectrogramNonlinear::Coefficients> cSG(c.nSpectrograms);
               for (auto i = 0; i < c.nSpectrograms; i++)
