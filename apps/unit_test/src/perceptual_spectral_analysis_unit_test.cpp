@@ -9,9 +9,7 @@ using namespace Eigen;
 
 TEST(PerceptualSpectralAnalysis, Interface)
 {
-    int dummy = 1;
     EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualSpectrogram>());
-    EXPECT_TRUE(dummy);
 }
 
 // test the public interface can run without crashing and gives valid output
