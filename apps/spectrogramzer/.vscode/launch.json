@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Spectrogramzer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../../build/spectrogramzer/Spectrogramzer",
+            "args": ["-i", "/mnt/c/DropboxOffline/sound files/appended.wav"],
+            "cwd": "${workspaceFolder}/../../build/spectrogramzer",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run appended",
+            "type": "shell",
+            "command": "./Spectrogramzer",
+            "args": ["-i", "/mnt/c/DropboxOffline/sound files/appended.wav"],
+            "options": {
+                "cwd": "${workspaceFolder}/../../build/spectrogramzer"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
