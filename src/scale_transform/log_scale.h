@@ -26,7 +26,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         // count number of output bins that has width smaller or equal to 1 (corresponds to upsampling)
         // these output bins will be calculated using linear interpolation
         nLinearBins = 0; // number of bins calculated using linear interpolation
-        while (((centerBins(nLinearBins + 1) - centerBins(nLinearBins) <= 1.f) && (nLinearBins < c.nOutputs - 1)) || (centerBins(nLinearBins) < 1.f))
+        while ((nLinearBins < c.nOutputs - 1) && ((centerBins(nLinearBins + 1) - centerBins(nLinearBins) <= 1.f) || (centerBins(nLinearBins) < 1.f)))
         {
             nLinearBins++;
         }
@@ -36,7 +36,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         // count number of output bins that has width smaller or equal to 2 (corresponds to downsampling by a factor of 2 or less)
         // these output bins will be calculated using cubic interpolation
         int nSum = nLinearBins; // number of bins calculated using linear and cubic interpolation
-        while (((centerBins(nSum + 1) - centerBins(nSum) <= 2.f) || (centerBins(nSum) < 2.f)) && (nSum < c.nOutputs - 2))
+        while ((nSum < c.nOutputs - 2) && ((centerBins(nSum + 1) - centerBins(nSum) <= 2.f) || (centerBins(nSum) < 2.f)))
         {
             nSum++;
         }
