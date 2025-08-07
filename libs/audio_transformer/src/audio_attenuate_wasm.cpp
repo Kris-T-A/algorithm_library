@@ -1,12 +1,7 @@
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_min_max.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_full_resolution.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_envelope.h"
-#include <emscripten/bind.h>
+#include <emscripten/emscripten.h>
 #include <nmmintrin.h>
-
-using namespace emscripten;
 
 extern "C"
 {
@@ -51,6 +46,76 @@ extern "C"
         {
             spectrogram.process(inputAudio.segment(iBuffer * bufferSize, bufferSize), outputSpectrogram.middleCols(iBuffer * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER));
         }
+    }
+
+    /**
+     * Create a stateful spectrogram analyzer instance
+     * @param bufferSize Size of processing buffer 
+     * @param sampleRate Sample rate in Hz
+     * @return Pointer to SpectrogramAdaptiveZeropad instance (managed by JavaScript)
+     */
+    EMSCRIPTEN_KEEPALIVE
+    SpectrogramAdaptiveZeropad* create_audio_spectral_analysis(const int bufferSize, float sampleRate)
+    {
+        // Validate input parameters
+        if (bufferSize <= 0 || sampleRate <= 0) { return nullptr; }
+
+        // Create configuration
+        SpectrogramAdaptiveConfiguration::Coefficients c;
+        c.bufferSize = bufferSize;
+        c.nBands = 2 * bufferSize + 1;
+        c.nFolds = 1;
+        c.nonlinearity = 1;
+        c.sampleRate = sampleRate;
+        c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
+
+        // Create and return new instance
+        return new SpectrogramAdaptiveZeropad(c);
+    }
+
+    /**
+     * Process audio using a stateful spectrogram analyzer
+     * @param analyzer Pointer to SpectrogramAdaptiveZeropad instance
+     * @param input Input audio buffer
+     * @param nBuffers Number of buffers to process
+     * @param output Output spectrogram matrix (nBands x nFrames)
+     * 
+     * @note nBands = 2 * bufferSize + 1
+     * @note nFrames = FRAMES_PER_BUFFER * nBuffers
+     */
+    EMSCRIPTEN_KEEPALIVE
+    void audio_spectral_analysis_stateful(SpectrogramAdaptiveZeropad* analyzer, const float* input, const int nBuffers, float* output)
+    {
+        // Validate input parameters
+        if (!analyzer || !input || !output) { return; }
+
+        const int bufferSize = analyzer->getCoefficients().bufferSize;
+        const int nBands = analyzer->getCoefficients().nBands;
+
+        // Calculate derived values
+        const int length = bufferSize * nBuffers;
+        const int nFrames = FRAMES_PER_BUFFER * nBuffers;
+
+        // Map raw pointers to Eigen arrays
+        Eigen::Map<const Eigen::ArrayXf> inputAudio(input, length);
+        Eigen::Map<Eigen::ArrayXXf> outputSpectrogram(output, nBands, nFrames);
+
+        // Process audio
+        for (int iBuffer = 0; iBuffer < nBuffers; iBuffer++)
+        {
+            analyzer->process(inputAudio.segment(iBuffer * bufferSize, bufferSize), 
+                            outputSpectrogram.middleCols(iBuffer * FRAMES_PER_BUFFER, FRAMES_PER_BUFFER));
+        }
+    }
+
+    /**
+     * Destroy a spectrogram analyzer instance
+     * @param analyzer Pointer to SpectrogramAdaptiveZeropad instance to destroy
+     */
+    EMSCRIPTEN_KEEPALIVE
+    void destroy_audio_spectral_analysis(SpectrogramAdaptiveZeropad* analyzer)
+    {
+        delete analyzer;
     }
 
     /**

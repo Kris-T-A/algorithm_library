@@ -74,7 +74,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Eigen nlohmann_json::nlohmann_json
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
                 -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
-                -s EXPORTED_FUNCTIONS=['_audio_attenuate','_malloc','_free'] \
+                -s EXPORTED_FUNCTIONS=['_audio_attenuate','_audio_spectral_analysis','_create_audio_spectral_analysis','_audio_spectral_analysis_stateful','_destroy_audio_spectral_analysis','_malloc','_free'] \
                 -s NO_EXIT_RUNTIME=1 \
                 -s INITIAL_MEMORY=64MB \
                 -s MAXIMUM_MEMORY=512MB \
