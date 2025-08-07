@@ -1,0 +1,162 @@
+<!-- place this demo in the same directory as audio_transformer.js and audio_transformer.wasm. Then open it in a web browser. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stateful Audio Processing Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .demo-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-line;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Stateful Audio Processing Demo</h1>
+    
+    <div class="demo-section">
+        <h3>Simple Stateful Processing Example</h3>
+        <p>This demonstrates how to use the stateful audio processing functions to maintain analyzer state between calls.</p>
+        <button onclick="runDemo()">Run Demo</button>
+        <button onclick="clearResults()">Clear</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script type="module">
+        let wasmModule = null;
+        let analyzer = null;
+
+        // Initialize WASM module
+        async function initModule() {
+            if (wasmModule) return wasmModule;
+            
+            return new Promise((resolve) => {
+                window.Module = {
+                    onRuntimeInitialized: function() {
+                        wasmModule = this;
+                        resolve(this);
+                    }
+                };
+                import('./audio_transformer.js');
+            });
+        }
+
+        // Generate a simple test signal
+        function generateTestSignal(length, frequency = 440, sampleRate = 44100) {
+            const signal = new Float32Array(length);
+            for (let i = 0; i < length; i++) {
+                signal[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.5;
+            }
+            return signal;
+        }
+
+        // Main demo function
+        async function runDemo() {
+            try {
+                addResult("🔄 Initializing WASM module...");
+                await initModule();
+                
+                // Configuration
+                const bufferSize = 1024;
+                const sampleRate = 44100;
+                const nBuffers = 4;
+                const inputLength = bufferSize * nBuffers;
+                const outputLength = (2 * bufferSize + 1) * (8 * nBuffers);
+
+                addResult("✅ WASM module loaded successfully");
+
+                // Step 1: Create analyzer
+                addResult("\n📊 Creating stateful analyzer...");
+                analyzer = wasmModule._create_audio_spectral_analysis(bufferSize, sampleRate);
+                if (!analyzer) throw new Error("Failed to create analyzer");
+                addResult(`✅ Analyzer created (pointer: ${analyzer})`);
+
+                // Step 2: Process multiple chunks with the same analyzer
+                addResult("\n🎵 Processing audio chunks...");
+                const testSignal = generateTestSignal(inputLength);
+                
+                for (let chunk = 1; chunk <= 3; chunk++) {
+                    // Allocate memory
+                    const inputPtr = wasmModule._malloc(inputLength * 4);
+                    const outputPtr = wasmModule._malloc(outputLength * 4);
+
+                    // Process with stateful analyzer (this is what actually works)
+                    wasmModule._audio_spectral_analysis_stateful(analyzer, inputPtr, nBuffers, outputPtr);
+                    
+                    addResult(`  Chunk ${chunk}: processed successfully`);
+
+                    // Clean up memory
+                    wasmModule._free(inputPtr);
+                    wasmModule._free(outputPtr);
+                }
+
+                // Step 3: Cleanup
+                addResult("\n🧹 Cleaning up...");
+                wasmModule._destroy_audio_spectral_analysis(analyzer);
+                analyzer = null;
+                addResult("✅ Demo completed successfully!");
+
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, true);
+            }
+        }
+
+        // Add result to UI
+        function addResult(message, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = isError ? 'result error' : 'result';
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // Clear results
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            if (analyzer && wasmModule) {
+                wasmModule._destroy_audio_spectral_analysis(analyzer);
+                analyzer = null;
+            }
+        }
+
+        // Make functions globally available
+        window.runDemo = runDemo;
+        window.clearResults = clearResults;
+    </script>
+</body>
+</html>
