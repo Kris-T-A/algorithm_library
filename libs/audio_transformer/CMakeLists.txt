@@ -55,7 +55,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Add the source files
-file(GLOB_RECURSE SOURCES "src/*.cpp" "../../src/filterbank/filterbank.cpp" "../../src/utilities/pffft.c" "../../src/fft/fft.cpp")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "../../src/filterbank/filterbank.cpp" "../../src/utilities/pffft.c" "../../src/fft/fft.cpp" "../../src/perceptual_spectral_analysis/perceptual_spectral_analysis.cpp")
 
 # Add the executable
 add_executable(${PROJECT_NAME} ${SOURCES})
