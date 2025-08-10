@@ -2,22 +2,24 @@
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "framework/framework.h"
 #include "scale_transform/log_scale.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
+#include "spectrogram/spectrogram_nonlinear.h"
 #include "utilities/fastonebigheader.h"
 
-class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualSpectrogram>
+class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualNonlinearSpectrogram>
 {
   public:
-    PerceptualSpectrogram(const Coefficients &c = Coefficients())
+    PerceptualNonlinearSpectrogram(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c},
-          spectrogram({.bufferSize = c.bufferSize, .nBands = c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+          spectrogram({.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.bufferSize + 1, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
           logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
+        framePerBuffer = positivePow2(c.nSpectrograms - 1);
+        frameSize = c.bufferSize / framePerBuffer;
         spectrogramOut = spectrogram.initDefaultOutput();
         if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
     }
 
-    SpectrogramAdaptiveZeropad spectrogram;
+    SpectrogramNonlinear spectrogram;
     LogScale logScale;
     DEFINE_MEMBER_ALGORITHMS(spectrogram, logScale)
 
@@ -26,10 +28,12 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
   private:
     inline void processAlgorithm(Input input, Output output)
     {
-        spectrogram.process(input, spectrogramOut);
-        if (C.spectralTilt) { spectrogramOut.colwise() *= spectralTiltVector; }
-        logScale.process(spectrogramOut, output);
-        output = output.max(1e-20f).unaryExpr(std::ref(energy2dB)); // energy2dB = 10*log10(x)
+        for (auto iBuffer = 0; iBuffer < framePerBuffer; ++iBuffer)
+        {
+            spectrogram.process(input.segment(iBuffer * frameSize, frameSize), spectrogramOut);
+            spectrogramOut = 10.f * spectrogramOut.max(1e-20f).log10();
+            logScale.process(spectrogramOut, output.col(iBuffer));
+        }
     }
 
     size_t getDynamicSizeVariables() const override
@@ -39,6 +43,8 @@ class PerceptualSpectrogram : public AlgorithmImplementation<PerceptualSpectralA
         return size;
     }
 
+    int framePerBuffer;
+    int frameSize;
     Eigen::ArrayXXf spectrogramOut;
     Eigen::ArrayXf spectralTiltVector;
 
