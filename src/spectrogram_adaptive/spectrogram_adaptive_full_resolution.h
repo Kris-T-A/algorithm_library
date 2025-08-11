@@ -12,7 +12,8 @@ class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<Spectro
   public:
     SpectrogramAdaptiveFullResolution(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
-          spectrograms(c.nSpectrograms, {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.nBands, .nFolds = c.nFolds, .nonlinearity = 1}),
+          spectrograms(c.nSpectrograms,
+                       {.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = c.nBands, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1})
     {
         assert(c.nSpectrograms > 0 && c.nBands > 0 && c.bufferSize > 0 && c.nFolds > 0);
@@ -24,20 +25,18 @@ class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<Spectro
         // spectrogram 0
         Eigen::ArrayXf window = spectrograms[0].filterbanks[0].getWindow();
         float winScale = window.sum();
-
-        Eigen::ArrayXf windowSmall = spectrograms[0].filterbanks[1].getWindow();
-        windowSmall *= winScale / windowSmall.sum(); // scale the small window
-        spectrograms[0].filterbanks[1].setWindow(windowSmall);
-
-        windowSmall = spectrograms[0].filterbanks[2].getWindow();
-        windowSmall *= winScale / windowSmall.sum(); // scale the small window
-        spectrograms[0].filterbanks[2].setWindow(windowSmall);
+        for (auto iFB = 0; iFB < static_cast<int>(spectrograms[0].filterbanks.size()); iFB++)
+        {
+            Eigen::ArrayXf windowSmall = spectrograms[0].filterbanks[iFB].getWindow();
+            windowSmall *= winScale / windowSmall.sum();
+            spectrograms[0].filterbanks[iFB].setWindow(windowSmall);
+        }
 
         // scale smaller spectrograms
         for (auto iSpectrogram = 1; iSpectrogram < c.nSpectrograms; iSpectrogram++)
         {
 
-            for (auto iFilterbank = 0; iFilterbank < 3; iFilterbank++)
+            for (auto iFilterbank = 0; iFilterbank < spectrograms[iSpectrogram].filterbanks.size(); iFilterbank++)
             {
                 setReducedWindow(iSpectrogram, iFilterbank, positivePow2(iSpectrogram), winScale);
             }
