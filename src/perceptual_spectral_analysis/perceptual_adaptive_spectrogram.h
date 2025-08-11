@@ -2,6 +2,7 @@
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "framework/framework.h"
 #include "scale_transform/log_scale.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_full_resolution.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "utilities/fastonebigheader.h"
 
@@ -10,7 +11,7 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
   public:
     PerceptualAdaptiveSpectrogram(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c},
-          spectrogram({.bufferSize = c.bufferSize, .nBands = c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
+          spectrogram({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
           logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
