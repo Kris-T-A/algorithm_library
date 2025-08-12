@@ -13,7 +13,7 @@ extern "C"
     constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
     constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
     constexpr int FRAMES_PER_BUFFER = 4;             // number of frames per buffer
-    }                                                // namespace
+    } // namespace
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output, bool spectralTilt)
@@ -28,7 +28,7 @@ extern "C"
         // SpectrogramAdaptiveConfiguration::Coefficients c;
         c.bufferSize = bufferSize;
         c.nBands = 2 * bufferSize + 1;
-        c.nFolds = 2;
+        c.nFolds = 1; // number of folds for spectral tilt
         c.nonlinearity = 1;
         c.sampleRate = sampleRate;
         c.nSpectrograms = std::log2(FRAMES_PER_BUFFER) + 1; // number of spectrograms to produce, each halving the buffer size
