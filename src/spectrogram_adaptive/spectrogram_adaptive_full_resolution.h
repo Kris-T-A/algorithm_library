@@ -75,14 +75,9 @@ class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<Spectro
                 spectrograms[iSpectrogram].process(input.segment(iFrame * frameSize, frameSize), spectrogramOut);
                 spectrogramOut = 10 * spectrogramOut.max(1e-20f).log10();    // convert to dB
                 output.col(iFrame) = output.col(iFrame).min(spectrogramOut); // combine spectrograms by taking the minimum
-
-                if (iSpectrogram == 2)
-                {
-                    filterMinMax.process(spectrogramOut, {minEnvelope, maxEnvelope});
-                    weight = ((spectrogramOut - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
-                }
             }
-
+            filterMinMax.process(output.col(iFrame), {minEnvelope, maxEnvelope});
+            weight = ((output.col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
             // Here spectrogramOut contains the last spectrogram
             weight = weight.min(1.f - ((spectrogramOut - output.col(iFrame) - 35.f) / 70.f).min(1.f).max(0.f).unaryExpr([](float x) { return fasterpow(x, 0.5f); }));
             output.col(iFrame) += weight * (spectrogramOut - output.col(iFrame));
