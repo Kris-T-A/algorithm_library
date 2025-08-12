@@ -70,15 +70,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 # The project depends on the following libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE Eigen nlohmann_json::nlohmann_json)
 
-# Set Emscripten link flags
+# Set Emscripten link flags - Compatible with traditional loading
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
-                -s EXPORTED_RUNTIME_METHODS=['cwrap'] \
+                -s EXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32','HEAP32'] \
                 -s EXPORTED_FUNCTIONS=['_audio_attenuate','_audio_spectral_analysis','_create_audio_spectral_analysis','_audio_spectral_analysis_stateful','_destroy_audio_spectral_analysis','_malloc','_free'] \
                 -s NO_EXIT_RUNTIME=1 \
-                -s INITIAL_MEMORY=64MB \
-                -s MAXIMUM_MEMORY=512MB \
+                -s INITIAL_MEMORY=67108864 \
+                -s MAXIMUM_MEMORY=536870912 \
                 -s ALLOW_MEMORY_GROWTH=1 \
+                -s MODULARIZE=0 \
                 --closure 1"
 )
 
