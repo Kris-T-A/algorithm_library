@@ -4,6 +4,7 @@
 
 // moving max min filter
 // The algorithm computes the moving maximum and then minimum of the 2D input over the horizontal axis
+// The delay of the algorithm is filterLength - 1
 //
 // author: Kristian Timm Andersen
 struct MovingMaxMinHorizontalConfiguration
@@ -61,6 +62,7 @@ class MovingMaxMinHorizontal : public AlgorithmImplementation<MovingMaxMinHorizo
         minOut.setConstant(std::numeric_limits<float>::infinity());
         counter = 0;
     }
+
     size_t getDynamicSizeVariables() const final
     {
         size_t size = maxOut.getDynamicMemorySize();
