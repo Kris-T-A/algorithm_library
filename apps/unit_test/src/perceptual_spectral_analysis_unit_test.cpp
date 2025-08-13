@@ -1,4 +1,5 @@
-#include "perceptual_spectral_analysis/perceptual_spectrogram.h"
+#include "perceptual_spectral_analysis/perceptual_adaptive_spectrogram.h"
+#include "perceptual_spectral_analysis/perceptual_nonlinear_spectrogram.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
 #include <fmt/ranges.h>
@@ -7,10 +8,9 @@ using namespace Eigen;
 
 //--------------------------------------------- TEST CASES ---------------------------------------------
 
-TEST(PerceptualSpectralAnalysis, Interface)
-{
-    EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualSpectrogram>());
-}
+TEST(PerceptualSpectralAnalysis, InterfaceAdaptive) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualAdaptiveSpectrogram>()); }
+
+TEST(PerceptualSpectralAnalysis, InterfaceNonlinear) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<PerceptualNonlinearSpectrogram>()); }
 
 // test the public interface can run without crashing and gives valid output
 TEST(PerceptualSpectralAnalysis, ProcessPublic)
@@ -26,7 +26,7 @@ TEST(PerceptualSpectralAnalysis, ProcessPublic)
 
 TEST(PerceptualSpectralAnalysis, GetFrequencies)
 {
-    PerceptualSpectrogram algo;
+    PerceptualAdaptiveSpectrogram algo;
     auto centerFrequencies = algo.getCenterFrequencies();
     fmt::print("Center frequencies: {}\n", (centerFrequencies * 100).round() / 100);
 }
