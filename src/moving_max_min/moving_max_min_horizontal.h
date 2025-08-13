@@ -2,6 +2,10 @@
 #include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 
+// moving max min filter
+// The algorithm computes the moving maximum and then minimum of the 2D input over the horizontal axis
+//
+// author: Kristian Timm Andersen
 struct MovingMaxMinHorizontalConfiguration
 {
     using Input = I::Real2D;
@@ -9,8 +13,8 @@ struct MovingMaxMinHorizontalConfiguration
 
     struct Coefficients
     {
-        int filterLength = 5;
-        int nChannels = 100;
+        int filterLength = 5; // number of samples to filter over the second dimension
+        int nChannels = 100;  // first dimension
         DEFINE_TUNABLE_COEFFICIENTS(filterLength, nChannels);
     };
 
@@ -31,36 +35,49 @@ struct MovingMaxMinHorizontalConfiguration
 class MovingMaxMinHorizontal : public AlgorithmImplementation<MovingMaxMinHorizontalConfiguration, MovingMaxMinHorizontal>
 {
   public:
-    MovingMaxMinHorizontal(const Coefficients &c = Coefficients())
-        : BaseAlgorithm{c},                                                         //
-          streamingMax({.filterLength = c.filterLength, .nChannels = c.nChannels}), //
-          streamingMin({.filterLength = c.filterLength, .nChannels = c.nChannels})
+    MovingMaxMinHorizontal(const Coefficients &c = Coefficients()) : BaseAlgorithm{c}
     {
-        streamingMax.resetInitialValue(-std::numeric_limits<float>::infinity());
-        streamingMin.resetInitialValue(std::numeric_limits<float>::infinity());
-        maxOut.resize(1, c.nChannels);
+        maxOut.resize(c.nChannels, c.filterLength);
+        minOut.resize(c.nChannels, c.filterLength);
+        resetVariables();
     }
-
-    StreamingMaxLemire streamingMax;
-    StreamingMinLemire streamingMin;
-    DEFINE_MEMBER_ALGORITHMS(streamingMax, streamingMin)
 
   private:
     void processAlgorithm(Input input, Output output)
     {
         for (auto sample = 0; sample < input.cols(); sample++)
         {
-            streamingMax.process(Eigen::Map<const Eigen::ArrayXXf>(input.col(sample).data(), 1, C.nChannels), maxOut);
-            streamingMin.process(maxOut, Eigen::Map<Eigen::ArrayXXf>(output.col(sample).data(), 1, C.nChannels));
+            maxOut.col(counter) = input.col(sample);
+            minOut.col(counter) = maxOut.col(0);
+            for (auto iMax = 1; iMax < C.filterLength; iMax++)
+            {
+                minOut.col(counter) = minOut.col(counter).max(maxOut.col(iMax));
+            }
+            output.col(sample) = minOut.col(0);
+            for (auto iMin = 1; iMin < C.filterLength; iMin++)
+            {
+                output.col(sample) = output.col(sample).min(minOut.col(iMin));
+            }
+            counter++;
+            if (counter >= C.filterLength) { counter = 0; }
         }
     }
 
+    void resetVariables() final
+    {
+        maxOut.setConstant(-std::numeric_limits<float>::infinity());
+        minOut.setConstant(std::numeric_limits<float>::infinity());
+        counter = 0;
+    }
     size_t getDynamicSizeVariables() const final
     {
         size_t size = maxOut.getDynamicMemorySize();
+        size += minOut.getDynamicMemorySize();
         return size;
     }
 
     Eigen::ArrayXXf maxOut;
+    Eigen::ArrayXXf minOut;
+    int counter;
     friend BaseAlgorithm;
 };
