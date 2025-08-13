@@ -48,16 +48,8 @@ class MovingMaxMinHorizontal : public AlgorithmImplementation<MovingMaxMinHorizo
         for (auto sample = 0; sample < input.cols(); sample++)
         {
             maxOut.col(counter) = input.col(sample);
-            minOut.col(counter) = maxOut.col(0);
-            for (auto iMax = 1; iMax < C.filterLength; iMax++)
-            {
-                minOut.col(counter) = minOut.col(counter).max(maxOut.col(iMax));
-            }
-            output.col(sample) = minOut.col(0);
-            for (auto iMin = 1; iMin < C.filterLength; iMin++)
-            {
-                output.col(sample) = output.col(sample).min(minOut.col(iMin));
-            }
+            minOut.col(counter) = maxOut.rowwise().maxCoeff();
+            output.col(sample) = minOut.rowwise().minCoeff();
             counter++;
             if (counter >= C.filterLength) { counter = 0; }
         }
