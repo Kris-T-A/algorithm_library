@@ -36,7 +36,7 @@ class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<Spectro
         for (auto iSpectrogram = 1; iSpectrogram < c.nSpectrograms; iSpectrogram++)
         {
 
-            for (auto iFilterbank = 0; iFilterbank < spectrograms[iSpectrogram].filterbanks.size(); iFilterbank++)
+            for (auto iFilterbank = 0u; iFilterbank < spectrograms[iSpectrogram].filterbanks.size(); iFilterbank++)
             {
                 setReducedWindow(iSpectrogram, iFilterbank, positivePow2(iSpectrogram), winScale);
             }
