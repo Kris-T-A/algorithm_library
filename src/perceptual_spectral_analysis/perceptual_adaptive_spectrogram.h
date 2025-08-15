@@ -2,7 +2,7 @@
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "framework/framework.h"
 #include "scale_transform/log_scale.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_full_resolution.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_moving.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "utilities/fastonebigheader.h"
 
@@ -18,7 +18,7 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
         if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
     }
 
-    SpectrogramAdaptiveZeropad spectrogram;
+    SpectrogramAdaptiveMoving spectrogram;
     LogScale logScale;
     DEFINE_MEMBER_ALGORITHMS(spectrogram, logScale)
 
