@@ -27,7 +27,14 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
               return cUpscale;
           }()),
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1}), //
-          movingMaxMin({.filterLength = 5, .nChannels = c.nBands})
+          movingMaxMin([&c]() {
+              std::vector<MovingMaxMinHorizontal::Coefficients> cMMM(2);
+              cMMM[0].filterLength = 1;
+              cMMM[0].nChannels = c.nBands;
+              cMMM[1].filterLength = 5;
+              cMMM[1].nChannels = c.nBands;
+              return cMMM;
+          }())
     {
         nOutputFrames = positivePow2(c.nSpectrograms - 1); // 2^(nSpectrograms-1) frames
         Eigen::ArrayXf inputFrame(c.bufferSize);
@@ -57,7 +64,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     SpectrogramSetZeropad spectrogramSet;
     VectorAlgo<Upscale2DLinear> upscale;
     FilterMinMaxLemire filterMinMax;
-    MovingMaxMinHorizontal movingMaxMin;
+    VectorAlgo<MovingMaxMinHorizontal> movingMaxMin;
     DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, filterMinMax, movingMaxMin)
 
   private:
@@ -77,10 +84,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
             const int shiftCols = currentCols - newCols;
             assert(shiftCols > 0);
             spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols); // copy prevous frames
-            if (iFB == 2)                                                                       // apply movingMinMax for 2nd filterbank
-            {
-                movingMaxMin.process(spectrogramOut[iFB], spectrogramOut[iFB]);
-            }
+            if (iFB > 0) { movingMaxMin[iFB - 1].process(spectrogramOut[iFB], spectrogramOut[iFB]); }
             spectrogramRaw[iFB].rightCols(newCols) = 10 * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
 
             upscale[iFB].process(spectrogramRaw[iFB].leftCols(newCols + 1), spectrogramUpscaled);
