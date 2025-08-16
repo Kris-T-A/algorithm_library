@@ -16,7 +16,7 @@ struct PerceptualSpectralAnalysisConfiguration
         int nBands = 100;      // number of perceptual frequency bands in output
         float sampleRate = 48000.0f;
         bool spectralTilt = true; // apply spectral tilt to output
-        int nSpectrograms = 4;    // each spectrogram halves the buffer size, so output contains 2^(nSpectrograms-1) frames
+        int nSpectrograms = 3;    // each spectrogram halves the buffer size, so output contains 2^(nSpectrograms-1) frames
         int nFolds = 1;        // number of folds: frameSize = nFolds * 2 * (nBands - 1)
         int nonlinearity = 0;  // nonlinearity factor where left/right side of window is reduced by a factor of 2^nonlinearity, 0 = no nonlinearity
         DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, sampleRate, spectralTilt, nSpectrograms, nFolds, nonlinearity)
