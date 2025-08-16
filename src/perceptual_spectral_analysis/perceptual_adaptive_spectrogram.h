@@ -11,11 +11,11 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
   public:
     PerceptualAdaptiveSpectrogram(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c},
-          spectrogram({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
-          logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
+          spectrogram({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity, .sampleRate = c.sampleRate}),
+          logScale({.nInputs = 2 * c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
-        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
+        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
     }
 
     SpectrogramAdaptiveMoving spectrogram;
