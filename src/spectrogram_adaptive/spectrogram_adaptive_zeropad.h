@@ -37,7 +37,7 @@ class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAda
         for (auto i = 1; i < c.nSpectrograms; i++)
         {
             int bufferSize = c.bufferSize / positivePow2(i);
-            int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
+            int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2 / positivePow2(i); // delay is half the frame size
             int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1;        // 2 columns for current and previous frame, plus additional columns for the delay
             spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
         }

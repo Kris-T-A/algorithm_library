@@ -29,7 +29,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1}), //
           movingMaxMin([&c]() {
               std::vector<MovingMaxMinHorizontal::Coefficients> cMMM(2);
-              cMMM[0].filterLength = 1;
+              cMMM[0].filterLength = 3;
               cMMM[0].nChannels = c.nBands;
               cMMM[1].filterLength = 5;
               cMMM[1].nChannels = c.nBands;
@@ -41,15 +41,16 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
         spectrogramOut = spectrogramSet.initOutput(inputFrame);
 
         spectrogramRaw.resize(c.nSpectrograms);
-        spectrogramRaw[0].resize(spectrogramOut[0].rows(), 2 + 1);                       // first spectrogram has 2 columns (current and previous frame)
+        spectrogramRaw[0].resize(spectrogramOut[0].rows(), 2);                           // first spectrogram has 2 columns (current and previous frame)
         int delayRef = spectrogramSet.spectrograms[0].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
         for (auto i = 1; i < c.nSpectrograms; i++)
         {
             int bufferSize = c.bufferSize / positivePow2(i);
-            int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
+            int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2 / positivePow2(i); // delay is half the frame size
             int nCols =
-                2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1 + positivePow2(i); // 2 columns for current and previous frame, plus additional columns for the delay
-            if (i == 2) { nCols -= 4; }                                                      // remove delay from movingMinMax
+                2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1; // 2 columns for current and previous frame, plus additional columns for the delay
+            if (i == 1) { nCols -= 2; }                                                   // remove delay from movingMinMax
+            if (i == 2) { nCols -= 4; }
             spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled.resize(c.nBands, nOutputFrames);
@@ -73,8 +74,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
         spectrogramSet.process(input, spectrogramOut);
 
         spectrogramRaw[0].col(0) = spectrogramRaw[0].col(1);                   // copy prevous frame
-        spectrogramRaw[0].col(1) = spectrogramRaw[0].col(2);                   // copy prevous frame
-        spectrogramRaw[0].col(2) = 10 * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
+        spectrogramRaw[0].col(1) = 10 * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
         upscale[0].process(spectrogramRaw[0], output);
 
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
