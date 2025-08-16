@@ -101,7 +101,7 @@ class SpectrogramSetZeropad : public AlgorithmImplementation<SpectrogramSetZerop
         auto winSize = static_cast<int>(window.size());
         Eigen::ArrayXf windowSmall = Eigen::ArrayXf::Zero(winSize); // create a zeroed array of the same size as the original window
         int winSmallSize = winSize / stride;
-        windowSmall.segment((winSize - winSmallSize) / 2, winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
+        windowSmall.tail(winSmallSize) = Eigen::ArrayXf::Map(window.data(), winSmallSize, Eigen::InnerStride<>(stride));
         windowSmall *= winScale / windowSmall.sum();
         spectrograms[nSpectrogram].filterbanks[nFilterbank].setWindow(windowSmall);
     }
