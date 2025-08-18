@@ -1,5 +1,4 @@
 #pragma once
-#include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 
 // moving max min filter
