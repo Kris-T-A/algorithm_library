@@ -29,9 +29,9 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1}), //
           movingMaxMin([&c]() {
               std::vector<MovingMaxMinHorizontal::Coefficients> cMMM(2);
-              cMMM[0].filterLength = 3;
+              cMMM[0].filterLength = 2;
               cMMM[0].nChannels = c.nBands;
-              cMMM[1].filterLength = 5;
+              cMMM[1].filterLength = 4;
               cMMM[1].nChannels = c.nBands;
               return cMMM;
           }())
@@ -47,10 +47,9 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
         {
             int bufferSize = c.bufferSize / positivePow2(i);
             int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2 / positivePow2(i); // delay is half the frame size
-            int nCols =
-                2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1; // 2 columns for current and previous frame, plus additional columns for the delay
-            if (i == 1) { nCols -= 2; }                                                   // remove delay from movingMinMax
-            if (i == 2) { nCols -= 4; }
+            int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1; // 2 columns for current and previous frame, plus additional columns for the delay
+            if (i == 1) { nCols -= 1; }                                            // remove delay from movingMinMax
+            if (i == 2) { nCols -= 3; }
             spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
         }
         spectrogramUpscaled.resize(c.nBands, nOutputFrames);
