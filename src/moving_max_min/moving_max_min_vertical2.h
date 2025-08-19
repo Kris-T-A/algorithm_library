@@ -7,7 +7,7 @@
 // The delay of the algorithm is filterLength - 1
 //
 // author: Kristian Timm Andersen
-struct MovingMaxMinVerticalConfiguration
+struct MovingMaxMinVerticalConfiguration2
 {
     using Input = I::Real2D;
     using Output = O::Real2D;
@@ -33,10 +33,10 @@ struct MovingMaxMinVerticalConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nChannels) && (output.cols() > 0) && output.allFinite(); }
 };
 
-class MovingMaxMinVertical : public AlgorithmImplementation<MovingMaxMinVerticalConfiguration, MovingMaxMinVertical>
+class MovingMaxMinVertical2 : public AlgorithmImplementation<MovingMaxMinVerticalConfiguration2, MovingMaxMinVertical2>
 {
   public:
-    MovingMaxMinVertical(const Coefficients &c = Coefficients()) : BaseAlgorithm{c}
+    MovingMaxMinVertical2(const Coefficients &c = Coefficients()) : BaseAlgorithm{c}
     {
         assert(c.filterLength > 0);
         maxOut.resize(c.filterLength);
