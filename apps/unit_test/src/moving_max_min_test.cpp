@@ -13,7 +13,7 @@ TEST(MovingMaxMin, InterfaceHorizontal) { EXPECT_TRUE(InterfaceTests::algorithmI
 TEST(MovingMaxMin, InterfaceVertical) { EXPECT_TRUE(InterfaceTests::algorithmInterfaceTest<MovingMaxMinVertical>()); }
 
 // plot example
-TEST(MovingMaxMin, plotResult)
+TEST(MovingMaxMin, plotHorizontal)
 {
     MovingMaxMinHorizontal::Coefficients c;
     c.filterLength = 3;
@@ -22,6 +22,24 @@ TEST(MovingMaxMin, plotResult)
     MovingMaxMinHorizontal algo(c);
 
     Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(c.nChannels, 10);
+    Eigen::ArrayXXf output = algo.initOutput(input);
+
+    algo.process(input, output);
+
+    std::cout << "Input:\n" << input << "\n\n";
+    std::cout << "Output:\n" << output << "\n";
+}
+
+// plot example
+TEST(MovingMaxMin, plotVertical)
+{
+    MovingMaxMinVertical::Coefficients c;
+    c.filterLength = 3;
+    c.nChannels = 10;
+
+    MovingMaxMinVertical algo(c);
+
+    Eigen::ArrayXXf input = Eigen::ArrayXXf::Random(c.nChannels, 2);
     Eigen::ArrayXXf output = algo.initOutput(input);
 
     algo.process(input, output);
