@@ -73,13 +73,14 @@ extern "C"
      * @return Pointer to SpectrogramAdaptiveZeropad instance (managed by JavaScript)
      */
     EMSCRIPTEN_KEEPALIVE
-    SpectrogramAdaptiveZeropad *create_audio_spectral_analysis(const int bufferSize, float sampleRate, int framesPerBuffer)
+    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const float sampleRate, const bool spectralTilt, const int framesPerBuffer)
     {
         // Validate input parameters
         if (bufferSize <= 0 || sampleRate <= 0) { return nullptr; }
 
         // Create configuration
-        SpectrogramAdaptiveConfiguration::Coefficients c;
+        PerceptualSpectralAnalysisConfiguration::Coefficients c;
+        c.spectralTilt = spectralTilt;
         c.bufferSize = bufferSize;
         c.nBands = 2 * bufferSize + 1;
         c.nFolds = 1;
@@ -88,12 +89,12 @@ extern "C"
         c.nSpectrograms = std::log2(framesPerBuffer) + 1; // number of spectrograms to produce, each halving the buffer size
 
         // Create and return new instance
-        return new SpectrogramAdaptiveZeropad(c);
+        return new PerceptualSpectralAnalysis(c);
     }
 
     /**
      * Process audio using a stateful spectrogram analyzer
-     * @param analyzer Pointer to SpectrogramAdaptiveZeropad instance
+     * @param analyzer Pointer to PerceptualSpectralAnalysis instance
      * @param input Input audio buffer
      * @param nBuffers Number of buffers to process
      * @param output Output spectrogram matrix (nBands x nFrames)
@@ -102,13 +103,15 @@ extern "C"
      * @note nFrames = framesPerBuffer * nBuffers
      */
     EMSCRIPTEN_KEEPALIVE
-    void audio_spectral_analysis_stateful(SpectrogramAdaptiveZeropad *analyzer, const float *input, const int nBuffers, float *output, int framesPerBuffer)
+    void audio_spectral_analysis_stateful(PerceptualSpectralAnalysis *analyzer, const float *input, const int nBuffers, float *output)
     {
         // Validate input parameters
         if (!analyzer || !input || !output) { return; }
 
-        const int bufferSize = analyzer->getCoefficients().bufferSize;
-        const int nBands = analyzer->getCoefficients().nBands;
+        const PerceptualSpectralAnalysisConfiguration::Coefficients &c = analyzer->getCoefficients();
+        const int bufferSize = c.bufferSize;
+        const int nBands = c.nBands;
+        const int framesPerBuffer = positivePow2(c.nSpectrograms - 1);
 
         // Calculate derived values
         const int length = bufferSize * nBuffers;
@@ -127,10 +130,10 @@ extern "C"
 
     /**
      * Destroy a spectrogram analyzer instance
-     * @param analyzer Pointer to SpectrogramAdaptiveZeropad instance to destroy
+     * @param analyzer Pointer to PerceptualSpectralAnalysis instance to destroy
      */
     EMSCRIPTEN_KEEPALIVE
-    void destroy_audio_spectral_analysis(SpectrogramAdaptiveZeropad *analyzer) { delete analyzer; }
+    void destroy_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer) { delete analyzer; }
 
     /**
      * Process audio using attenuation
