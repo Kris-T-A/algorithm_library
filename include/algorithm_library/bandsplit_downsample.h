@@ -36,14 +36,17 @@ struct BandsplitDownsampleConfiguration
         {}
     };
 
-    static Eigen::ArrayXXf initInput(const Coefficients &c) { return Eigen::ArrayXXf::Random(c.nSamples, c.nChannels); } // arbitrary number of samples
+    static Eigen::ArrayXXf initInput(const Coefficients &c) { return Eigen::ArrayXXf::Random(c.nSamples, c.nChannels); }
 
     static std::tuple<Eigen::ArrayXXf, Eigen::ArrayXXf> initOutput(Input input, const Coefficients &c)
     {
         return std::make_tuple(Eigen::ArrayXXf::Zero(c.nSamples / 3, c.nChannels), Eigen::ArrayXXf::Zero(c.nSamples, c.nChannels));
     }
 
-    static bool validInput(Input input, const Coefficients &c) { return (input.rows() == c.nSamples) && (input.cols() == c.nChannels) && input.allFinite(); }
+    static bool validInput(Input input, const Coefficients &c)
+    {
+        return (input.rows() == c.nSamples) && (c.nSamples % 3 == 0) && (input.cols() == c.nChannels) && input.allFinite();
+    }
 
     static bool validOutput(Output output, const Coefficients &c)
     {
