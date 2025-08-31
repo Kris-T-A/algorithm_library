@@ -42,7 +42,7 @@ class DownSampling2ndDim : public AlgorithmImplementation<Downsampling2ndDimConf
 
     DownSampling2ndDim(Coefficients c = Coefficients()) : BaseAlgorithm{c}
     {
-        windowLowpass = hann(filterOversampling * c.ratio);
+        windowLowpass = hann(filterOversampling * c.ratio).reverse(); // reverse periodic window to reduce delay by 1/2 sample
         windowLowpass /= windowLowpass.sum(); // normalize window
         timeBuffer.resize(c.nBands, (filterOversampling - 1) * c.ratio);
         resetVariables();
