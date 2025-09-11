@@ -14,14 +14,14 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
     LogScale(Coefficients c = Coefficients()) : BaseAlgorithm{c}
     {
         // use double precision in the calculation of centerBins to ensure accuracy in log and pow conversions
-        double freqPerBin = static_cast<double>(c.indexEnd) / (c.nInputs - 1);                                // frequency difference between two adjacent bins
-        double scale = c.transformType == Coefficients::TransformType::LOGARITHMIC ? 1.0 : freqPerBin / 700; // scale = 1 for logarithmic scale, freqPerBin / 700 for Mel scale
-        double minLog = std::log10(1.0 + scale * c.indexStart / freqPerBin);                                 // minimum log value
-        double maxLog = std::log10(1.0 + scale * c.indexEnd / freqPerBin);                                   // maximum log value
+        double scale = c.transformType == Coefficients::TransformType::LOGARITHMIC ? 1.0 : 1.0 / 700.0; // scale = 1 for logarithmic scale, 1 / 700 for Mel scale
+        double minLog = std::log10(1.0 + scale * c.indexStart);                                         // minimum log value
+        double maxLog = std::log10(1.0 + scale * c.indexEnd);                                           // maximum log value
         // linear scale from corresponding indexStart to indexEnd
         Eigen::ArrayXd linLogs = Eigen::ArrayXd::LinSpaced(c.nOutputs, minLog, maxLog); // linear spaced center indices in logarithmic domain
         // logarithmic scale corresponding to index of center bins in the input array (size: nOutputs)
-        Eigen::ArrayXf centerBins = linLogs.unaryExpr([&scale](double x) { return (std::pow(10, x) - 1.0)/scale; }).cast<float>();
+        const double freqPerBin = scale * static_cast<double>(c.indexEnd) / (c.nInputs - 1); // frequency difference between two adjacent bins multiplied by scale
+        Eigen::ArrayXf centerBins = linLogs.unaryExpr([&freqPerBin](double x) { return (std::pow(10, x) - 1.0) / freqPerBin; }).cast<float>();
 
         // count number of output bins that has width smaller or equal to 1 (corresponds to upsampling)
         // these output bins will be calculated using linear interpolation
@@ -59,7 +59,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         Eigen::ArrayXf indices = getCenterIndices();
         Eigen::ArrayXf cornerIndices(C.nOutputs + 1);
         cornerIndices << 0, ((indices.head(C.nOutputs - 1) + indices.tail(C.nOutputs - 1)) / 2).round(), static_cast<float>(C.nInputs); // corner indices for the output bins
-        Eigen::ArrayXf diff = cornerIndices.tail(C.nOutputs) - cornerIndices.head(C.nOutputs);                       // get difference between adjacent indices
+        Eigen::ArrayXf diff = cornerIndices.tail(C.nOutputs) - cornerIndices.head(C.nOutputs); // get difference between adjacent indices
 
         for (auto channel = 0; channel < x.cols(); channel++)
         {
@@ -130,7 +130,6 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
                 output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) =
                     std::max(output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
             }
-            
         }
     }
 
