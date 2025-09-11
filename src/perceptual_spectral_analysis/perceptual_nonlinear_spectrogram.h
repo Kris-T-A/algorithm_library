@@ -11,7 +11,7 @@ class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<Perceptual
     PerceptualNonlinearSpectrogram(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c},
           spectrogram({.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = 2 * c.bufferSize + 1, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
-          logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
+          logScale({.nInputs = c.bufferSize + 1, .nOutputs = c.nBands, .indexStart = 20, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         framePerBuffer = positivePow2(c.nSpectrograms - 1);
         frameSize = c.bufferSize / framePerBuffer;
