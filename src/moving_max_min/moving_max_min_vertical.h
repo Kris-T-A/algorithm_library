@@ -42,7 +42,6 @@ class MovingMaxMinVertical : public AlgorithmImplementation<MovingMaxMinVertical
         maxOut.resize(c.filterLength);
         minOut.resize(c.filterLength);
         counter = 0;
-        wHalf = (c.filterLength - 1) / 2 + 1;
     }
 
   private:
@@ -55,7 +54,7 @@ class MovingMaxMinVertical : public AlgorithmImplementation<MovingMaxMinVertical
             counter = 0;
             // this output is discarded and is only used to update internal values
             int iRow = 1;
-            for (; iRow < wHalf; iRow++)
+            for (; iRow < C.filterLength - 1; iRow++)
             {
                 maxOut(counter) = input(iRow, iCol);
                 minOut(counter) = maxOut.maxCoeff();
@@ -93,6 +92,5 @@ class MovingMaxMinVertical : public AlgorithmImplementation<MovingMaxMinVertical
     Eigen::ArrayXf maxOut;
     Eigen::ArrayXf minOut;
     int counter = 0;
-    int wHalf;
     friend BaseAlgorithm;
 };
