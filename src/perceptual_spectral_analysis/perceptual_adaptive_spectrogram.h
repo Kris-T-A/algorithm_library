@@ -18,7 +18,7 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
                                          .nonlinearity = c.nonlinearity,
                                          .sampleRate = c.sampleRate}),
           logScale(
-              {.nInputs = 2 * c.bufferSize + 1, .nOutputs = c.nBands, .indexStart = 40, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC}),
+              {.nInputs = 2 * c.bufferSize + 1, .nOutputs = c.nBands, .indexStart = 20, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC}),
           movingMaxMin({.filterLength = std::max(1, static_cast<int>(c.nBands / 500)), .nChannels = c.nBands})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
