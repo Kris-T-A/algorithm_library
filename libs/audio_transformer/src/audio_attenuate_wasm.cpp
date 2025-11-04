@@ -135,6 +135,14 @@ extern "C"
     EMSCRIPTEN_KEEPALIVE
     void destroy_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer) { delete analyzer; }
 
+    EMSCRIPTEN_KEEPALIVE
+    int get_n_frequency_bands(PerceptualSpectralAnalysis *analyzer)
+    {
+        if (!analyzer) { return 0; }
+        const PerceptualSpectralAnalysisConfiguration::Coefficients &c = analyzer->getCoefficients();
+        return c.nBands;
+    }
+
     /**
      * Process audio using attenuation
      * @param input Input audio buffer (must be 16-byte aligned)
