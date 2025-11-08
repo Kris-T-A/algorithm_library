@@ -115,6 +115,7 @@ using Bool = Out<Eigen::Array<bool, Eigen::Dynamic, 1>>;
 using Real2D = Out<Eigen::ArrayXXf>;
 using Complex2D = Out<Eigen::ArrayXXcf>;
 using Bool2D = Out<Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>>;
+using U8Int2D = Out<Eigen::Array<uint8_t, Eigen::Dynamic, Eigen::Dynamic>>;
 
 using VectorReal2D = std::vector<Eigen::ArrayXXf> &;
 using VectorComplex2D = std::vector<Eigen::ArrayXXcf> &;
