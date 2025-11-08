@@ -33,7 +33,7 @@ struct ConvertRGBAConfiguration
         output.setZero();
         for (auto iCol = 0; iCol < input.cols(); iCol++)
         {
-            Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, 1>, 0, Eigen::InnerStride<4>>(&output(3, iCol), input.rows()).setConstant(static_cast<uint8_t>(c.alpha));
+            Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, 1>, 0, Eigen::InnerStride<4>>(&output(3, iCol), input.rows()).setConstant(c.alpha);
         }
 
         return output;
@@ -45,9 +45,9 @@ struct ConvertRGBAConfiguration
     {
         int nRows4 = output.rows() / 4;
         bool flag = nRows4 * 4 == output.rows(); // must be multiple of 4
-        for (int i = 0; i < output.cols(); i++) // every 4th value must be equal to alpha
+        for (int iCol = 0; iCol < output.cols(); iCol++) // every 4th value must be equal to alpha
         {
-            flag &= (Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, 1>, 0, Eigen::InnerStride<4>>(&output(3,i), nRows4) == static_cast<uint8_t>(c.alpha))
+            flag &= (Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, 1>, 0, Eigen::InnerStride<4>>(&output(3,iCol), nRows4) == c.alpha)
                         .all();
         }
         return flag;
