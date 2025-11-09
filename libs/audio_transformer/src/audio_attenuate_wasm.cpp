@@ -1,3 +1,4 @@
+#include "algorithm_library/convert_rgba.h"
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
@@ -12,7 +13,7 @@ extern "C"
     constexpr int ANALYSIS_DELAY = 2;                // number of buffers delay in analysis
     constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
     constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
-    } // namespace
+    }                                                // namespace
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output, bool spectralTilt, int framesPerBuffer)
@@ -108,7 +109,7 @@ extern "C"
         // Validate input parameters
         if (!analyzer || !input || !output) { return; }
 
-        const PerceptualSpectralAnalysisConfiguration::Coefficients &c = analyzer->getCoefficients();
+        const PerceptualSpectralAnalysisConfiguration::Coefficients c = analyzer->getCoefficients();
         const int bufferSize = c.bufferSize;
         const int nBands = c.nBands;
         const int framesPerBuffer = positivePow2(c.nSpectrograms - 1);
@@ -141,6 +142,46 @@ extern "C"
         if (!analyzer) { return 0; }
         const PerceptualSpectralAnalysisConfiguration::Coefficients &c = analyzer->getCoefficients();
         return c.nBands;
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void convert_rgba(const float *input, const int width, const int height, uint8_t alpha, int method, uint8_t *output)
+    {
+        // Validate input parameters
+        if (!input || !output) { return; }
+        if (width <= 0 || height <= 0) { return; }
+
+        // Map raw pointers to Eigen arrays
+        Eigen::Map<const Eigen::ArrayXXf> inputImage(input, height, width);
+        Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, Eigen::Dynamic>> outputImage(output, 4 * height, width);
+
+        // Create converter instance
+        ConvertRGBA::Coefficients c;
+        c.alpha = alpha;
+        switch (method)
+        {
+        case 0:
+            c.colorScale = ConvertRGBA::Coefficients::OCEAN;
+            break;
+        case 1:
+            c.colorScale = ConvertRGBA::Coefficients::PARULA;
+            break;
+        case 2:
+            c.colorScale = ConvertRGBA::Coefficients::VIRIDIS;
+            break;
+        case 3:
+            c.colorScale = ConvertRGBA::Coefficients::MAGMA;
+            break;
+        case 4:
+            c.colorScale = ConvertRGBA::Coefficients::PLASMA;
+            break;
+        default:
+            c.colorScale = ConvertRGBA::Coefficients::PARULA;
+        }
+        ConvertRGBA converter(c);
+
+        // Perform conversion
+        converter.process(inputImage, outputImage);
     }
 
     /**

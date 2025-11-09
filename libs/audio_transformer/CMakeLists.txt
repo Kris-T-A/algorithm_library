@@ -55,7 +55,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Add the source files
-file(GLOB_RECURSE SOURCES "src/*.cpp" "../../src/filterbank/filterbank.cpp" "../../src/utilities/pffft.c" "../../src/fft/fft.cpp" "../../src/perceptual_spectral_analysis/perceptual_spectral_analysis.cpp")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "../../src/filterbank/filterbank.cpp" "../../src/utilities/pffft.c" "../../src/fft/fft.cpp" "../../src/perceptual_spectral_analysis/perceptual_spectral_analysis.cpp" "../../src/convert_rgba/convert_rgba.cpp")
 
 # Add the executable
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -74,7 +74,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Eigen nlohmann_json::nlohmann_json
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS "-s WASM=1 \
                 -s EXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32','HEAP32'] \
-                -s EXPORTED_FUNCTIONS=['_audio_attenuate','_audio_spectral_analysis','_create_audio_spectral_analysis','_audio_spectral_analysis_stateful','_destroy_audio_spectral_analysis','_get_n_frequency_bands','_malloc','_free'] \
+                -s EXPORTED_FUNCTIONS=['_audio_attenuate','_audio_spectral_analysis','_create_audio_spectral_analysis','_audio_spectral_analysis_stateful','_destroy_audio_spectral_analysis','_get_n_frequency_bands','_convert_rgba','_malloc','_free'] \
                 -s NO_EXIT_RUNTIME=1 \
                 -s INITIAL_MEMORY=67108864 \
                 -s MAXIMUM_MEMORY=536870912 \
