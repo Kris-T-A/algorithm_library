@@ -13,7 +13,7 @@ extern "C"
     constexpr int ANALYSIS_DELAY = 2;                // number of buffers delay in analysis
     constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
     constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
-    }                                                // namespace
+    }
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output, bool spectralTilt, int framesPerBuffer)
@@ -127,12 +127,6 @@ extern "C"
         {
             analyzer->process(inputAudio.segment(iBuffer * bufferSize, bufferSize), outputSpectrogram.middleCols(iBuffer * framesPerBuffer, framesPerBuffer));
         }
-
-        Eigen::Map<Eigen::ArrayXf> minVals(minValues, nFrames);
-        Eigen::Map<Eigen::ArrayXf> maxVals(maxValues, nFrames);
-        minVals = outputSpectrogram.colwise().minCoeff().transpose();
-        maxVals = outputSpectrogram.colwise().maxCoeff().transpose();
-
     }
 
     /**
@@ -141,6 +135,24 @@ extern "C"
      */
     EMSCRIPTEN_KEEPALIVE
     void destroy_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer) { delete analyzer; }
+
+    EMSCRIPTEN_KEEPALIVE
+    void getMinMaxTimeValues(const float *input, const int nBands, const int nFrames, float *minValues, float *maxValues)
+    {
+        Eigen::Map<const Eigen::ArrayXXf> inputSpectrogram(input, nBands, nFrames);
+        Eigen::Map<Eigen::ArrayXf> minVals(minValues, nFrames);
+        Eigen::Map<Eigen::ArrayXf> maxVals(maxValues, nFrames);
+        minVals = inputSpectrogram.colwise().minCoeff().transpose();
+        maxVals = inputSpectrogram.colwise().maxCoeff().transpose();
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void getMinMaxValues(const float *input, const int nBands, const int nFrames, float *minValues, float *maxValues)
+    {
+        Eigen::Map<const Eigen::ArrayXXf> inputSpectrogram(input, nBands, nFrames);
+        *minValues = inputSpectrogram.minCoeff();
+        *maxValues = inputSpectrogram.maxCoeff();
+    }
 
     EMSCRIPTEN_KEEPALIVE
     int get_n_frequency_bands(PerceptualSpectralAnalysis *analyzer)
@@ -166,23 +178,12 @@ extern "C"
         c.alpha = alpha;
         switch (method)
         {
-        case 0:
-            c.colorScale = ConvertRGBA::Coefficients::OCEAN;
-            break;
-        case 1:
-            c.colorScale = ConvertRGBA::Coefficients::PARULA;
-            break;
-        case 2:
-            c.colorScale = ConvertRGBA::Coefficients::VIRIDIS;
-            break;
-        case 3:
-            c.colorScale = ConvertRGBA::Coefficients::MAGMA;
-            break;
-        case 4:
-            c.colorScale = ConvertRGBA::Coefficients::PLASMA;
-            break;
-        default:
-            c.colorScale = ConvertRGBA::Coefficients::PARULA;
+        case 0: c.colorScale = ConvertRGBA::Coefficients::OCEAN; break;
+        case 1: c.colorScale = ConvertRGBA::Coefficients::PARULA; break;
+        case 2: c.colorScale = ConvertRGBA::Coefficients::VIRIDIS; break;
+        case 3: c.colorScale = ConvertRGBA::Coefficients::MAGMA; break;
+        case 4: c.colorScale = ConvertRGBA::Coefficients::PLASMA; break;
+        default: c.colorScale = ConvertRGBA::Coefficients::PARULA;
         }
         ConvertRGBA converter(c);
 
@@ -206,30 +207,19 @@ extern "C"
         c.alpha = alpha;
         switch (method)
         {
-        case 0:
-            c.colorScale = ConvertRGBA::Coefficients::OCEAN;
-            break;
-        case 1:
-            c.colorScale = ConvertRGBA::Coefficients::PARULA;
-            break;
-        case 2:
-            c.colorScale = ConvertRGBA::Coefficients::VIRIDIS;
-            break;
-        case 3:
-            c.colorScale = ConvertRGBA::Coefficients::MAGMA;
-            break;
-        case 4:
-            c.colorScale = ConvertRGBA::Coefficients::PLASMA;
-            break;
-        default:
-            c.colorScale = ConvertRGBA::Coefficients::PARULA;
+        case 0: c.colorScale = ConvertRGBA::Coefficients::OCEAN; break;
+        case 1: c.colorScale = ConvertRGBA::Coefficients::PARULA; break;
+        case 2: c.colorScale = ConvertRGBA::Coefficients::VIRIDIS; break;
+        case 3: c.colorScale = ConvertRGBA::Coefficients::MAGMA; break;
+        case 4: c.colorScale = ConvertRGBA::Coefficients::PLASMA; break;
+        default: c.colorScale = ConvertRGBA::Coefficients::PARULA;
         }
         ConvertRGBA converter(c);
 
         // scale and transform to row-major with flip
         float denominator = std::max(scaleMax - scaleMin, 1e-6f);
         Eigen::ArrayXXf scaledImage = (inputImage.transpose().colwise().reverse() - scaleMin) / denominator;
-        
+
         // Perform conversion
         converter.process(scaledImage, outputImage);
     }
