@@ -74,7 +74,7 @@ extern "C"
      * @return Pointer to SpectrogramAdaptiveZeropad instance (managed by JavaScript)
      */
     EMSCRIPTEN_KEEPALIVE
-    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const float sampleRate, const bool spectralTilt, const int framesPerBuffer)
+    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const int nBands, const float sampleRate, const bool spectralTilt, const int framesPerBuffer)
     {
         // Validate input parameters
         if (bufferSize <= 0 || sampleRate <= 0) { return nullptr; }
@@ -83,7 +83,7 @@ extern "C"
         PerceptualSpectralAnalysisConfiguration::Coefficients c;
         c.spectralTilt = spectralTilt;
         c.bufferSize = bufferSize;
-        c.nBands = 2 * bufferSize + 1;
+        c.nBands = nBands;
         c.nFolds = 1;
         c.nonlinearity = 1;
         c.sampleRate = sampleRate;
@@ -104,10 +104,10 @@ extern "C"
      * @note nFrames = framesPerBuffer * nBuffers
      */
     EMSCRIPTEN_KEEPALIVE
-    void audio_spectral_analysis_stateful(PerceptualSpectralAnalysis *analyzer, const float *input, const int nBuffers, float *output, float *minValues, float *maxValues)
+    void audio_spectral_analysis_stateful(PerceptualSpectralAnalysis *analyzer, const float *input, const int nBuffers, float *output)
     {
         // Validate input parameters
-        if (!analyzer || !input || !output || !minValues || !maxValues) { return; }
+        if (!analyzer || !input || !output) { return; }
 
         const PerceptualSpectralAnalysisConfiguration::Coefficients c = analyzer->getCoefficients();
         const int bufferSize = c.bufferSize;
