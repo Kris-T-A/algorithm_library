@@ -13,7 +13,7 @@ extern "C"
     constexpr int ANALYSIS_DELAY = 2;                // number of buffers delay in analysis
     constexpr int OUTPUT_DELAY = 2 * ANALYSIS_DELAY; // number of buffers delay in output
     constexpr int BUFFER_DELAY = OUTPUT_DELAY - 1;   // Number of buffers that produce zero output
-    }
+    } // namespace
 
     EMSCRIPTEN_KEEPALIVE
     void audio_spectral_analysis(const float *input, const int bufferSize, const int nBuffers, float sampleRate, float *output, bool spectralTilt, int framesPerBuffer)
@@ -74,7 +74,8 @@ extern "C"
      * @return Pointer to SpectrogramAdaptiveZeropad instance (managed by JavaScript)
      */
     EMSCRIPTEN_KEEPALIVE
-    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const int nBands, const float sampleRate, const bool spectralTilt, const int framesPerBuffer)
+    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const int nBands, const float sampleRate, const bool spectralTilt,
+                                                               const int framesPerBuffer)
     {
         // Validate input parameters
         if (bufferSize <= 0 || sampleRate <= 0) { return nullptr; }
@@ -200,7 +201,7 @@ extern "C"
 
         // Map raw pointers to Eigen arrays
         Eigen::Map<const Eigen::ArrayXXf> inputImage(input, height, width);
-        Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, Eigen::Dynamic>> outputImage(output, 4 * height, width);
+        Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, Eigen::Dynamic>> outputImage(output, 4 * width, height);
 
         // Create converter instance
         ConvertRGBA::Coefficients c;
@@ -218,7 +219,7 @@ extern "C"
 
         // scale and transform to row-major with flip
         float denominator = std::max(scaleMax - scaleMin, 1e-6f);
-        Eigen::ArrayXXf scaledImage = (inputImage.transpose().colwise().reverse() - scaleMin) / denominator;
+        Eigen::ArrayXXf scaledImage = (inputImage.transpose() - scaleMin) / denominator;
 
         // Perform conversion
         converter.process(scaledImage, outputImage);
