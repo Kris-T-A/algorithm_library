@@ -23,7 +23,9 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
     {
         spectrogramOut = spectrogram.initDefaultOutput();
         if (c.spectralTilt) { spectralTiltVector = (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
-        else { spectralTiltVector.resize(0); }
+        else {
+            spectralTiltVector.resize(0);
+        }
     }
 
     SpectrogramAdaptiveMoving spectrogram;
