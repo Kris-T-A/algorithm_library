@@ -1,7 +1,6 @@
 #include "algorithm_library/convert_rgba.h"
 #include "algorithm_library/perceptual_spectral_analysis.h"
 #include "audio_attenuate/audio_attenuate_adaptive.h"
-#include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include <emscripten/emscripten.h>
 #include <nmmintrin.h>
 
@@ -74,8 +73,8 @@ extern "C"
      * @return Pointer to SpectrogramAdaptiveZeropad instance (managed by JavaScript)
      */
     EMSCRIPTEN_KEEPALIVE
-    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const int nBands, const float sampleRate, const bool spectralTilt,
-                                                               const int framesPerBuffer)
+    PerceptualSpectralAnalysis *create_audio_spectral_analysis(const int bufferSize, const int nBands, const float sampleRate, const float frequencyMin,
+                                                               const float frequencyMax, const bool spectralTilt, const int framesPerBuffer, int method)
     {
         // Validate input parameters
         if (bufferSize <= 0 || sampleRate <= 0) { return nullptr; }
@@ -88,7 +87,13 @@ extern "C"
         c.nFolds = 1;
         c.nonlinearity = 1;
         c.sampleRate = sampleRate;
+        c.frequencyMin = frequencyMin;
+        c.frequencyMax = frequencyMax;
         c.nSpectrograms = std::log2(framesPerBuffer) + 1; // number of spectrograms to produce, each halving the buffer size
+        if (method == 0) { c.method = PerceptualSpectralAnalysisConfiguration::Coefficients::ADAPTIVE; }
+        else {
+            c.method = PerceptualSpectralAnalysisConfiguration::Coefficients::NONLINEAR;
+        }
 
         // Create and return new instance
         return new PerceptualSpectralAnalysis(c);

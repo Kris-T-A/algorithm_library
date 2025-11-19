@@ -11,13 +11,22 @@ class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<Perceptual
     PerceptualNonlinearSpectrogram(const Coefficients &c = Coefficients())
         : BaseAlgorithm{c},
           spectrogram({.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = 2 * c.bufferSize + 1, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
-          logScale(
-              {.nInputs = 2 * c.bufferSize + 1, .nOutputs = c.nBands, .indexStart = 20, .indexEnd = c.sampleRate / 2, .transformType = LogScale::Coefficients::LOGARITHMIC})
+          logScale({.nInputs = 2 * c.bufferSize + 1,
+                    .nOutputs = c.nBands,
+                    .indexStart = c.frequencyMin,
+                    .indexEnd = c.frequencyMax,
+                    .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         framePerBuffer = positivePow2(c.nSpectrograms - 1);
         frameSize = c.bufferSize / framePerBuffer;
         spectrogramOut = spectrogram.initDefaultOutput();
-        if (c.spectralTilt) { spectralTiltVector = Eigen::ArrayXf::LinSpaced(c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f; } // 3dB boost per octave
+        if (c.spectralTilt)
+        {
+            spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, c.frequencyMin, c.frequencyMax) / 1000.f).log10();
+        } // 3dB boost per octave
+        else {
+            spectralTiltVector.resize(0);
+        }
     }
 
     SpectrogramNonlinear spectrogram;
@@ -33,6 +42,7 @@ class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<Perceptual
         {
             spectrogram.process(input.segment(iBuffer * frameSize, frameSize), spectrogramOut);
             spectrogramOut = 10.f * spectrogramOut.max(1e-20f).log10();
+            if (C.spectralTilt) { spectrogramOut.colwise() += spectralTiltVector; }
             logScale.process(spectrogramOut, output.col(iBuffer));
         }
     }

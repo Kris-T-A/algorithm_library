@@ -7,8 +7,10 @@ using NonlinearImpl = Implementation<PerceptualNonlinearSpectrogram, PerceptualS
 template <>
 void Algorithm<PerceptualSpectralAnalysisConfiguration>::setImplementation(const Coefficients &c)
 {
-    if (c.spectralTilt == false) { pimpl = std::make_unique<AdaptiveImpl>(c); }
-    else { pimpl = std::make_unique<NonlinearImpl>(c); }
+    if (c.method == PerceptualSpectralAnalysisConfiguration::Coefficients::ADAPTIVE) { pimpl = std::make_unique<AdaptiveImpl>(c); }
+    else {
+        pimpl = std::make_unique<NonlinearImpl>(c);
+    }
 }
 
 PerceptualSpectralAnalysis::PerceptualSpectralAnalysis(const Coefficients &c) : Algorithm<PerceptualSpectralAnalysisConfiguration>(c) {}
