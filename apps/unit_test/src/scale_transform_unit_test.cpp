@@ -19,7 +19,7 @@ TEST(ScaleTransform, getters)
     c.transformType = c.MEL;
     algo.setCoefficients(c);
     ArrayXf centerFreqs = algo.getCenterFrequencies();
-    fmt::print("Sample rate: {} Hz\n", c.indexEnd * 2);
+    fmt::print("Sample rate: {} Hz\n", c.inputEnd * 2);
     fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), centerFreqs);
 
     c.transformType = c.LOGARITHMIC;
@@ -29,10 +29,11 @@ TEST(ScaleTransform, getters)
 
     fmt::print("\nSetting new sample rate...\n");
 
-    c.indexEnd = 48000 / 2;
+    c.inputEnd = 48000 / 2;
+    c.outputEnd = c.inputEnd;
     c.transformType = c.MEL;
     algo.setCoefficients(c);
-    fmt::print("Sample rate: {} Hz\n", c.indexEnd * 2);
+    fmt::print("Sample rate: {} Hz\n", c.inputEnd * 2);
     centerFreqs = algo.getCenterFrequencies();
     fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), centerFreqs);
 

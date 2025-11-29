@@ -12,14 +12,15 @@ struct ScaleTransformConfiguration
 
     struct Coefficients
     {
-        int nInputs = 50;      // input size of linear scale
-        int nOutputs = 10;     // output size of transformed scale
-        float indexStart = 20; // the output indices goes from indexStart to indexEnd. For instance, 20 Hz for a frequency scale
-        float indexEnd = 8000; // the input indices goes from 0 to indexEnd. For instance, 8 kHz for 16 kHz sample rate on a frequency scale
+        int nInputs = 50;       // input size of linear scale
+        int nOutputs = 10;      // output size of transformed scale
+        float outputStart = 20; // the output indices goes from outputStart to outputEnd. For instance, 20 Hz for a frequency scale
+        float outputEnd = 8000; // the output indices goes from outputStart to outputEnd. For instance, 8 kHz for 16 kHz sample rate on a frequency scale
+        float inputEnd = 8000;  // the input indices goes from 0 to inputEnd. For instance, 8 kHz for 16 kHz sample rate on a frequency scale
         enum TransformType { MEL, LOGARITHMIC };
         TransformType transformType = LOGARITHMIC; // choose type of scale transformation
         DEFINE_TUNABLE_ENUM(TransformType, {{MEL, "Mel Scale"}, {LOGARITHMIC, "Logarithmic Scale"}})
-        DEFINE_TUNABLE_COEFFICIENTS(nInputs, nOutputs, indexStart, indexEnd, transformType)
+        DEFINE_TUNABLE_COEFFICIENTS(nInputs, nOutputs, outputStart, outputEnd, inputEnd, transformType)
     };
 
     struct Parameters

@@ -19,19 +19,15 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
                                          .sampleRate = c.sampleRate}),
           logScale({.nInputs = 2 * c.bufferSize + 1,
                     .nOutputs = c.nBands,
-                    .indexStart = c.frequencyMin,
-                    .indexEnd = c.frequencyMax,
+                    .outputStart = c.frequencyMin,
+                    .outputEnd = c.frequencyMax,
+                    .inputEnd = c.sampleRate / 2,
                     .transformType = LogScale::Coefficients::LOGARITHMIC}),
           movingMaxMin({.filterLength = std::max(1, static_cast<int>(c.nBands / 500)), .nChannels = c.nBands})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
-        if (c.spectralTilt)
-        {
-            spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, c.frequencyMin, c.frequencyMax) / 1000.f).log10();
-        } // 3dB boost per octave
-        else {
-            spectralTiltVector.resize(0);
-        }
+        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
+        else { spectralTiltVector.resize(0); }
     }
 
     SpectrogramAdaptiveMoving spectrogram;

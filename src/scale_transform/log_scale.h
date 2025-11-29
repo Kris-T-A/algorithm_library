@@ -13,14 +13,15 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
   public:
     LogScale(Coefficients c = Coefficients()) : BaseAlgorithm{c}
     {
+        assert(c.outputEnd <= c.inputEnd);
         // use double precision in the calculation of centerBins to ensure accuracy in log and pow conversions
         double scale = c.transformType == Coefficients::TransformType::LOGARITHMIC ? 1.0 : 1.0 / 700.0; // scale = 1 for logarithmic scale, 1 / 700 for Mel scale
-        double minLog = std::log10(1.0 + scale * c.indexStart);                                         // minimum log value
-        double maxLog = std::log10(1.0 + scale * c.indexEnd);                                           // maximum log value
-        // linear scale from corresponding indexStart to indexEnd
+        double minLog = std::log10(1.0 + scale * c.outputStart);                                        // minimum log value
+        double maxLog = std::log10(1.0 + scale * c.outputEnd);                                          // maximum log value
+        // linear scale from corresponding outputStart to outputEnd
         Eigen::ArrayXd linLogs = Eigen::ArrayXd::LinSpaced(c.nOutputs, minLog, maxLog); // linear spaced center indices in logarithmic domain
         // logarithmic scale corresponding to index of center bins in the input array (size: nOutputs)
-        const double freqPerBin = scale * static_cast<double>(c.indexEnd) / (c.nInputs - 1); // frequency difference between two adjacent bins multiplied by scale
+        const double freqPerBin = scale * static_cast<double>(c.inputEnd) / (c.nInputs - 1); // frequency difference between two adjacent bins multiplied by scale
         Eigen::ArrayXf centerBins = linLogs.unaryExpr([&freqPerBin](double x) { return (std::pow(10, x) - 1.0) / freqPerBin; }).cast<float>();
 
         // count number of output bins that has width smaller or equal to 1 (corresponds to upsampling)
@@ -30,8 +31,8 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         {
             nLinearBins++;
         }
-        indexStart = centerBins.head(nLinearBins).cast<int>();
-        fractionLinear = centerBins.head(nLinearBins) - indexStart.cast<float>(); // fraction for linear interpolation
+        outputStart = centerBins.head(nLinearBins).cast<int>();
+        fractionLinear = centerBins.head(nLinearBins) - outputStart.cast<float>(); // fraction for linear interpolation
 
         // count number of output bins that has width smaller or equal to 2 (corresponds to downsampling by a factor of 2 or less)
         // these output bins will be calculated using cubic interpolation
@@ -74,7 +75,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
     Eigen::ArrayXf getCenterIndices() const
     {
         Eigen::ArrayXf array(C.nOutputs);
-        array.head(nLinearBins) = indexStart.cast<float>() + fractionLinear;           // linear interpolation
+        array.head(nLinearBins) = outputStart.cast<float>() + fractionLinear;          // linear interpolation
         array.segment(nLinearBins, nCubicBins) = fractionCubic;                        // cubic interpolation
         array.segment(nLinearBins + nCubicBins, nTriangularBins) = fractionTriangular; // triangular interpolation
         return array;
@@ -82,7 +83,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
 
     Eigen::ArrayXf getCenterFrequencies() const
     {
-        return getCenterIndices() * (C.indexEnd / (C.nInputs - 1)); // convert indices to frequencies
+        return getCenterIndices() * (C.outputEnd / (C.nInputs - 1)); // convert indices to frequencies
     }
 
   private:
@@ -94,7 +95,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
             for (auto i = 0; i < nLinearBins; i++)
             {
                 // weighted sum
-                output(i, channel) = (1.f - fractionLinear(i)) * input(indexStart(i), channel) + fractionLinear(i) * input(indexStart(i) + 1, channel);
+                output(i, channel) = (1.f - fractionLinear(i)) * input(outputStart(i), channel) + fractionLinear(i) * input(outputStart(i) + 1, channel);
             }
 
             // cubic interpolation
@@ -135,7 +136,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
 
     size_t getDynamicSizeVariables() const final
     {
-        size_t size = indexStart.getDynamicMemorySize();
+        size_t size = outputStart.getDynamicMemorySize();
         size += fractionLinear.getDynamicMemorySize();
         size += fractionCubic.getDynamicMemorySize();
         size += fractionTriangular.getDynamicMemorySize();
@@ -145,7 +146,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
 
   public:
     int nLinearBins, nCubicBins, nTriangularBins; // number of bins calculated using linear, cubic and triangular interpolation
-    Eigen::ArrayXi indexStart;
+    Eigen::ArrayXi outputStart;
     Eigen::ArrayXf fractionLinear;
     Eigen::ArrayXf fractionCubic;
     Eigen::ArrayXf fractionTriangular;

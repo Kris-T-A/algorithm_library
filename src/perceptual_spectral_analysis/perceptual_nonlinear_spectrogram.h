@@ -13,20 +13,16 @@ class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<Perceptual
           spectrogram({.bufferSize = c.bufferSize / positivePow2(c.nSpectrograms - 1), .nBands = 2 * c.bufferSize + 1, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
           logScale({.nInputs = 2 * c.bufferSize + 1,
                     .nOutputs = c.nBands,
-                    .indexStart = c.frequencyMin,
-                    .indexEnd = c.frequencyMax,
+                    .outputStart = c.frequencyMin,
+                    .outputEnd = c.frequencyMax,
+                    .inputEnd = c.sampleRate / 2,
                     .transformType = LogScale::Coefficients::LOGARITHMIC})
     {
         framePerBuffer = positivePow2(c.nSpectrograms - 1);
         frameSize = c.bufferSize / framePerBuffer;
         spectrogramOut = spectrogram.initDefaultOutput();
-        if (c.spectralTilt)
-        {
-            spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, c.frequencyMin, c.frequencyMax) / 1000.f).log10();
-        } // 3dB boost per octave
-        else {
-            spectralTiltVector.resize(0);
-        }
+        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
+        else { spectralTiltVector.resize(0); }
     }
 
     SpectrogramNonlinear spectrogram;

@@ -11,8 +11,9 @@ Eigen::ArrayXXf rescaleSpectrogram(const Eigen::Ref<const Eigen::ArrayXXf> &spec
     LogScale::Coefficients c;
     c.nInputs = height;
     c.nOutputs = heightNew;
-    c.indexStart = 20; // 20 Hz
-    c.indexEnd = sampleRate / 2; // Nyquist frequency
+    c.outputStart = 20;           // 20 Hz
+    c.outputEnd = sampleRate / 2; // Nyquist frequency
+    c.inputEnd = sampleRate / 2;  // Nyquist frequency
     c.transformType = LogScale::Coefficients::TransformType::LOGARITHMIC;
 
     LogScale rescaler(c);
