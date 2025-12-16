@@ -91,7 +91,8 @@ extern "C"
         c.frequencyMax = frequencyMax;
         c.nSpectrograms = std::log2(framesPerBuffer) + 1; // number of spectrograms to produce, each halving the buffer size
         if (method == 0) { c.method = PerceptualSpectralAnalysisConfiguration::Coefficients::ADAPTIVE; }
-        else {
+        else
+        {
             c.method = PerceptualSpectralAnalysisConfiguration::Coefficients::NONLINEAR;
         }
 
@@ -224,10 +225,36 @@ extern "C"
 
         // scale and transform to row-major with flip
         float denominator = std::max(scaleMax - scaleMin, 1e-6f);
-        Eigen::ArrayXXf scaledImage = (inputImage.transpose() - scaleMin) / denominator;
+        Eigen::ArrayXXf scaledImage = (inputImage.transpose() - scaleMin).max(0.f).min(scaleMax) / denominator;
 
         // Perform conversion
         converter.process(scaledImage, outputImage);
+    }
+
+    // Get color values for a list of normalized floats (0.0 to 1.0)
+    EMSCRIPTEN_KEEPALIVE
+    void getColorValues(float *colorValues, int length, uint8_t alpha, int method, uint8_t *outputValues)
+    {
+        // Map raw pointers to Eigen arrays
+        Eigen::Map<const Eigen::ArrayXf> inputColors(colorValues, length);
+        Eigen::Map<Eigen::Array<uint8_t, Eigen::Dynamic, 1>> outputColors(outputValues, 4 * length);
+
+        // Create converter instance
+        ConvertRGBA::Coefficients c;
+        c.alpha = alpha;
+        switch (method)
+        {
+        case 0: c.colorScale = ConvertRGBA::Coefficients::OCEAN; break;
+        case 1: c.colorScale = ConvertRGBA::Coefficients::PARULA; break;
+        case 2: c.colorScale = ConvertRGBA::Coefficients::VIRIDIS; break;
+        case 3: c.colorScale = ConvertRGBA::Coefficients::MAGMA; break;
+        case 4: c.colorScale = ConvertRGBA::Coefficients::PLASMA; break;
+        default: c.colorScale = ConvertRGBA::Coefficients::PARULA;
+        }
+        ConvertRGBA converter(c);
+
+        // Get color values
+        converter.process(inputColors, outputColors);
     }
 
     /**
