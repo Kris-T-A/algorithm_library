@@ -33,7 +33,8 @@ class BandsplitDownsampleChebyshev : public AlgorithmImplementation<BandsplitDow
     {
         // lowpass and downsample by factor of 3
         filterLowpass.process(input, buffer);
-        output.downsampled = buffer(Eigen::seq(0, C.nSamples - 1, 3), Eigen::indexing::all); // downsample by factor of 3
+        // downsample by factor of 3. Mark noalias() to avoid heap allocation
+        output.downsampled.matrix().noalias() = buffer.matrix()(Eigen::seq(0, C.nSamples - 1, 3), Eigen::indexing::all);
 
         // highpass and delay
         filterHighpass.process(input, buffer);
