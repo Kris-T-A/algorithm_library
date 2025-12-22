@@ -100,6 +100,12 @@ extern "C"
         return new PerceptualSpectralAnalysis(c);
     }
 
+    EMSCRIPTEN_KEEPALIVE
+    void reset_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer)
+    {
+        if (analyzer) { analyzer->reset(); }
+    }
+
     /**
      * Process audio using a stateful spectrogram analyzer
      * @param analyzer Pointer to PerceptualSpectralAnalysis instance
