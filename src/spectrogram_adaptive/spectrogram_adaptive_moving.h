@@ -76,6 +76,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
         spectrogramRaw[0].col(1) = 10 * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
         upscale[0].process(spectrogramRaw[0], output);
 
+        if (C.nSpectrograms == 1) { return; } // if only one spectrogram, we are done here
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
             const auto newCols = static_cast<int>(spectrogramOut[iFB].cols());
