@@ -30,3 +30,24 @@ TEST(PerceptualSpectralAnalysis, GetFrequencies)
     auto centerFrequencies = algo.getCenterFrequencies();
     fmt::print("Center frequencies: {}\n", (centerFrequencies * 100).round() / 100);
 }
+
+TEST(PerceptualSpectralAnalysis, MemorySize)
+{
+    PerceptualAdaptiveSpectrogram algo;
+    auto c = algo.getCoefficients();
+    c.sampleRate = 48000.f;
+    c.bufferSize = .032 * c.sampleRate; // set buffer size to 32 ms
+    c.nBands = 1025;
+    c.frequencyMin = 40.f;
+    c.frequencyMax = 20000.f;
+    c.spectralTilt = true;
+    c.nSpectrograms = 4;
+    c.nFolds = 1;
+    c.nonlinearity = 1;
+    algo.setCoefficients(c);
+
+    auto sizeStatic = algo.getStaticSize();
+    fmt::print("Static size variables: {} bytes\n", sizeStatic);
+    auto sizeDynamic = algo.getDynamicSize();
+    fmt::print("Dynamic size variables: {} bytes\n", sizeDynamic);
+}
