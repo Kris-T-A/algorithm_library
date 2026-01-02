@@ -101,6 +101,15 @@ extern "C"
     }
 
     EMSCRIPTEN_KEEPALIVE
+    void set_frames_per_buffer_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer, const int framesPerBuffer)
+    {
+        if (!analyzer) { return; }
+        PerceptualSpectralAnalysisConfiguration::Coefficients c = analyzer->getCoefficients();
+        c.nSpectrograms = std::log2(framesPerBuffer) + 1; // number of spectrograms to produce, each halving the buffer size
+        analyzer->setCoefficients(c);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
     void reset_audio_spectral_analysis(PerceptualSpectralAnalysis *analyzer)
     {
         if (analyzer) { analyzer->reset(); }
