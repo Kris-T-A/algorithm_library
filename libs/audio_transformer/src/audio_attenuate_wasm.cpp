@@ -240,7 +240,7 @@ extern "C"
 
         // scale and transform to row-major with flip
         float denominator = std::max(scaleMax - scaleMin, 1e-6f);
-        Eigen::ArrayXXf scaledImage = (inputImage.transpose() - scaleMin).max(0.f).min(scaleMax) / denominator;
+        Eigen::ArrayXXf scaledImage = (inputImage.transpose() - scaleMin).max(0.f).min(denominator) / denominator;
 
         // Perform conversion
         converter.process(scaledImage, outputImage);
