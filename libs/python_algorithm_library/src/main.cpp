@@ -21,6 +21,7 @@
 #include "algorithm_library/solver_toeplitz.h"
 #include "algorithm_library/spectrogram.h"
 #include "algorithm_library/spline.h"
+#include "algorithm_library/perceptual_spectral_analysis.h"
 #include "algorithm_library/spectrogram_adaptive.h"
 
 #include "pfr.hpp"
@@ -245,4 +246,5 @@ PYBIND11_MODULE(PythonAlgorithmLibrary, m)
     DEFINE_PYTHON_INTERFACE(SingleChannelPath);
     DEFINE_PYTHON_INTERFACE(NoiseReduction);
     DEFINE_PYTHON_INTERFACE(SpectrogramAdaptive);
+    DEFINE_PYTHON_INTERFACE(PerceptualSpectralAnalysis);
 }
