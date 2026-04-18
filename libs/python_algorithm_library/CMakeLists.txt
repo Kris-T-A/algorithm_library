@@ -73,8 +73,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC AlgorithmLibrary pybind11_json pfr)
 
-add_custom_command(
-  TARGET ${PROJECT_NAME}
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/python_script/
+add_custom_target(copy_${PROJECT_NAME} ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/python_script/
+  DEPENDS ${PROJECT_NAME}
 )
