@@ -5,7 +5,10 @@ template <>
 void Algorithm<FilterbankAnalysisConfiguration>::setImplementation(const Coefficients &c)
 {
     if (c.nChannels == 1) { pimpl = std::make_unique<Implementation<FilterbankAnalysisSingleChannel, FilterbankAnalysisConfiguration>>(c); }
-    else { pimpl = std::make_unique<Implementation<FilterbankAnalysisWOLA, FilterbankAnalysisConfiguration>>(c); }
+    else
+    {
+        pimpl = std::make_unique<Implementation<FilterbankAnalysisWOLA, FilterbankAnalysisConfiguration>>(c);
+    }
 }
 
 FilterbankAnalysis::FilterbankAnalysis(const Coefficients &c) : Algorithm<FilterbankAnalysisConfiguration>(c) {}
@@ -14,7 +17,10 @@ template <>
 void Algorithm<FilterbankSynthesisConfiguration>::setImplementation(const Coefficients &c)
 {
     if (c.nChannels == 1) { pimpl = std::make_unique<Implementation<FilterbankSynthesisSingleChannel, FilterbankSynthesisConfiguration>>(c); }
-    else { pimpl = std::make_unique<Implementation<FilterbankSynthesisWOLA, FilterbankSynthesisConfiguration>>(c); }
+    else
+    {
+        pimpl = std::make_unique<Implementation<FilterbankSynthesisWOLA, FilterbankSynthesisConfiguration>>(c);
+    }
 }
 
 FilterbankSynthesis::FilterbankSynthesis(const Coefficients &c) : Algorithm<FilterbankSynthesisConfiguration>(c) {}
@@ -25,7 +31,10 @@ float FilterbankAnalysis::getDelaySamples() const
     {
         return static_cast<Implementation<FilterbankAnalysisSingleChannel, FilterbankAnalysisConfiguration> *>(pimpl.get())->algo.getDelaySamples();
     }
-    else { return static_cast<Implementation<FilterbankAnalysisWOLA, FilterbankAnalysisConfiguration> *>(pimpl.get())->algo.getDelaySamples(); }
+    else
+    {
+        return static_cast<Implementation<FilterbankAnalysisWOLA, FilterbankAnalysisConfiguration> *>(pimpl.get())->algo.getDelaySamples();
+    }
 }
 
 float FilterbankSynthesis::getDelaySamples() const
@@ -34,7 +43,10 @@ float FilterbankSynthesis::getDelaySamples() const
     {
         return static_cast<Implementation<FilterbankSynthesisSingleChannel, FilterbankSynthesisConfiguration> *>(pimpl.get())->algo.getDelaySamples();
     }
-    else { return static_cast<Implementation<FilterbankSynthesisWOLA, FilterbankSynthesisConfiguration> *>(pimpl.get())->algo.getDelaySamples(); }
+    else
+    {
+        return static_cast<Implementation<FilterbankSynthesisWOLA, FilterbankSynthesisConfiguration> *>(pimpl.get())->algo.getDelaySamples();
+    }
 }
 
 namespace FilterbankShared
@@ -50,6 +62,7 @@ Eigen::ArrayXf getAnalysisWindow(const FilterbankConfiguration::Coefficients &c)
 {
     const int frameSize = FilterbankConfiguration::calculateFrameSize(c);
     Eigen::ArrayXf window = (c.nFolds > 1) ? sinc(frameSize, 2) * kaiser(frameSize, 10) : hann(frameSize);
+    window /= frameSize / 4; // scale so sinuoid at amplitude 1 is at 0dB magnitude
     return window;
 }
 
@@ -63,7 +76,10 @@ Eigen::ArrayXf getSynthesisWindow(const FilterbankConfiguration::Coefficients &c
     else
     {
         if ((fftSize / c.bufferSize) <= 2) { window = Eigen::ArrayXf::Ones(frameSize); }
-        else { window = hann(frameSize); }
+        else
+        {
+            window = hann(frameSize);
+        }
     }
 
     // scale synthesis window to give unit output
