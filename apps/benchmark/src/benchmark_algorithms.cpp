@@ -1,4 +1,6 @@
 #include "activity_detection/activity_detection_noise_estimation.h"
+#include "adaptive_predictor/adaptive_predictor_kalman_time_domain.h"
+#include "adaptive_predictor/adaptive_predictor_nlms_time_domain.h"
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "audio_attenuate/decimate_gain.h"
 #include "bandsplit_downsample/bandsplit_downsample_chebyshev.h"
@@ -88,6 +90,8 @@ DEFINE_BENCHMARK_ALGORITHM(StreamingMinMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMaxLemire)
 DEFINE_BENCHMARK_ALGORITHM(StreamingMinLemire)
 DEFINE_BENCHMARK_ALGORITHM(DCRemoverFirstOrder)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorNLMSTimeDomain)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorKalmanTimeDomain)
 DEFINE_BENCHMARK_ALGORITHM(LogScale)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionFusedNoiseEstimation)
