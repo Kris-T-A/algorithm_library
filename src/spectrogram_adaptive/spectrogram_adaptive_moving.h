@@ -16,7 +16,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     SpectrogramAdaptiveMoving(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
           spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
-          upscale({.factorHorizontal = 2, .factorVertical = 1, .leftBoundaryExcluded = false}),
+          upscale({.factorHorizontal = 2, .factorVertical = 1, .leftBoundaryExcluded = true}),
           filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1}), //
           movingMaxMin([&c]() {
               std::vector<MovingMaxMinHorizontal::Coefficients> cMMM(c.nSpectrograms - 1);
@@ -30,26 +30,20 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     {
         nOutputFrames = positivePow2(c.nSpectrograms - 1); // 2^(nSpectrograms-1) frames
         Eigen::ArrayXf inputFrame(c.bufferSize);
-        spectrogramOut = spectrogramSet.initOutput(inputFrame);
+        spectrograms = spectrogramSet.initOutput(inputFrame);
 
-        spectrogramRaw.resize(c.nSpectrograms);
-        spectrogramRaw[0].resize(spectrogramOut[0].rows(), 2);                           // first spectrogram has 2 columns (current and previous frame)
+        spectrogramBuffer.resize(c.nSpectrograms - 1);
         int delayRef = spectrogramSet.spectrograms[0].filterbanks[0].getFrameSize() / 2; // delay is half the frame size
         for (auto i = 1; i < c.nSpectrograms; i++)
         {
             int bufferSize = c.bufferSize / positivePow2(i);
             int delay = spectrogramSet.spectrograms[i].filterbanks[0].getFrameSize() / 2 / positivePow2(i); // delay is half the frame size
-            int nCols = 2 + (delayRef - delay) / bufferSize + positivePow2(i) - 1; // 2 columns for current and previous frame, plus additional columns for the delay
-            nCols -= positivePow2(i) - 1;                                          // remove delay due to movingMinMax
-            spectrogramRaw[i].resize(spectrogramOut[i].rows(), nCols);
+            int nCols = 1 + (delayRef - delay) / bufferSize + positivePow2(i) - 1;                          // 1 column for current, plus additional columns for the delay
+            nCols -= positivePow2(i) - 1;                                                                   // remove delay due to movingMinMax
+            spectrogramBuffer[i - 1].resize(spectrograms[i].rows(), nCols);
         }
-        spectrogramUpscaled.resize(c.nBands, nOutputFrames + 1);
         outputWithLeftBoundary.resize(c.nBands, nOutputFrames + 1);
-
-        minEnvelope.resize(c.nBands);
-        maxEnvelope.resize(c.nBands);
-        weight.resize(c.nBands);
-
+        leftBoundaries.resize(c.nBands, c.nSpectrograms - 1);
         resetVariables();
     }
 
@@ -62,49 +56,39 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
   private:
     void inline processAlgorithm(Input input, Output output)
     {
-        spectrogramSet.process(input, spectrogramOut);
+        spectrogramSet.process(input, spectrograms);
 
-        spectrogramRaw[0].col(0) = spectrogramRaw[0].col(1);                   // copy prevous frame
-        spectrogramRaw[0].col(1) = 10 * spectrogramOut[0].max(1e-20f).log10(); // convert power to dB;
-        outputWithLeftBoundary.leftCols(2) = spectrogramRaw[0];
+        output.col(0) = 10 * spectrograms[0].max(1e-20f).log10(); // convert power to dB;
 
-        for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
+        for (auto iFB = 0; iFB < C.nSpectrograms - 1; iFB++)
         {
-            const int prevCols = positivePow2(iFB - 1);
-            const auto newCols = static_cast<int>(spectrogramOut[iFB].cols()); // positivePow2(iFB)
-            const auto newColsp1 = newCols + 1;
-            const auto currentCols = static_cast<int>(spectrogramRaw[iFB].cols()); // complicated?
+            const int prevCols = positivePow2(iFB);
+            const auto newCols = positivePow2(iFB + 1);
+            const auto currentCols = static_cast<int>(spectrogramBuffer[iFB].cols());
             const int shiftCols = currentCols - newCols;
             assert(shiftCols > 0);
 
+            outputWithLeftBoundary.col(0) = leftBoundaries.col(iFB);
+            outputWithLeftBoundary.middleCols(1, prevCols) = output.leftCols(prevCols);
+            // save next left boundary
+            leftBoundaries.col(iFB) = output.col(prevCols - 1);
             // upscale previous output
-            upscale.process(outputWithLeftBoundary.leftCols(prevCols + 1), spectrogramUpscaled.leftCols(newColsp1));
+            upscale.process(outputWithLeftBoundary.leftCols(prevCols + 1), output.leftCols(newCols));
 
             // update current spectrogram
-            spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols); // copy prevous frames
-            movingMaxMin[iFB - 1].process(spectrogramOut[iFB], spectrogramOut[iFB]);
-            spectrogramRaw[iFB].rightCols(newCols) = 10 * spectrogramOut[iFB].max(1e-20f).log10(); // convert power to dB
+            spectrogramBuffer[iFB].leftCols(shiftCols) = spectrogramBuffer[iFB].rightCols(shiftCols); // copy prevous frames
+            movingMaxMin[iFB].process(spectrograms[iFB + 1], spectrograms[iFB + 1]);
+            spectrogramBuffer[iFB].rightCols(newCols) = 10 * spectrograms[iFB + 1].max(1e-20f).log10(); // convert power to dB
 
             // combine previous and current spectrogram
-            outputWithLeftBoundary.leftCols(newColsp1) = spectrogramUpscaled.leftCols(newColsp1).min(spectrogramRaw[iFB].leftCols(newColsp1));
-
-            // commented out since its not used.
-            // for (int iFrame = 0; iFrame < newColsp1; iFrame++)
-            // {
-            //     filterMinMax.process(outputWithLeftBoundary.col(iFrame), {minEnvelope, maxEnvelope});
-            //     weight = ((outputWithLeftBoundary.col(iFrame) - minEnvelope).max(1e-3f) / (maxEnvelope - minEnvelope).max(1e-3f)).abs2();
-            //     weight = weight.min(1.f - ((spectrogramRaw[iFB].col(iFrame) - outputWithLeftBoundary.col(iFrame) - 2.f) / 4.f).min(1.f).max(0.f).unaryExpr([](float x) {
-            //         return fasterpow(x, 0.5f);
-            //     }));
-            //     outputWithLeftBoundary.col(iFrame) += weight * (spectrogramRaw[iFB].col(iFrame) - outputWithLeftBoundary.col(iFrame));
-            // }
+            output.leftCols(newCols) = output.leftCols(newCols).min(spectrogramBuffer[iFB].leftCols(newCols));
         }
-        output = outputWithLeftBoundary.rightCols(nOutputFrames);
     }
 
     void resetVariables() final
     {
-        for (auto &spectrogram : spectrogramRaw)
+        leftBoundaries.setZero();
+        for (auto &spectrogram : spectrogramBuffer)
         {
             spectrogram.setZero();
         }
@@ -113,27 +97,24 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     size_t getDynamicSizeVariables() const final
     {
         size_t size = 0;
-        for (auto i = 0; i < static_cast<int>(spectrogramOut.size()); i++)
+        for (auto &s : spectrograms)
         {
-            size += spectrogramOut[i].getDynamicMemorySize();
-            size += spectrogramRaw[i].getDynamicMemorySize();
+            size += s.getDynamicMemorySize();
         }
-        size += spectrogramUpscaled.getDynamicMemorySize();
+        for (auto &sp : spectrogramBuffer)
+        {
+            size += sp.getDynamicMemorySize();
+        }
         size += outputWithLeftBoundary.getDynamicMemorySize();
-        size += minEnvelope.getDynamicMemorySize();
-        size += maxEnvelope.getDynamicMemorySize();
-        size += weight.getDynamicMemorySize();
+        size += leftBoundaries.getDynamicMemorySize();
         return size;
     }
 
     int nOutputFrames;
-    std::vector<Eigen::ArrayXXf> spectrogramOut;
-    std::vector<Eigen::ArrayXXf> spectrogramRaw;
-    Eigen::ArrayXXf spectrogramUpscaled;
+    std::vector<Eigen::ArrayXXf> spectrograms;
+    std::vector<Eigen::ArrayXXf> spectrogramBuffer;
     Eigen::ArrayXXf outputWithLeftBoundary;
-    Eigen::ArrayXf minEnvelope;
-    Eigen::ArrayXf maxEnvelope;
-    Eigen::ArrayXf weight;
+    Eigen::ArrayXXf leftBoundaries;
 
     friend BaseAlgorithm;
 };
