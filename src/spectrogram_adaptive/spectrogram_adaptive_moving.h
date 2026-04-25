@@ -1,6 +1,5 @@
 #pragma once
 #include "algorithm_library/spectrogram_adaptive.h"
-#include "filter_min_max/filter_min_max_lemire.h"
 #include "framework/framework.h"
 #include "moving_max_min/moving_max_min_horizontal.h"
 #include "spectrogram_adaptive/upscale2d_linear.h"
@@ -16,9 +15,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     SpectrogramAdaptiveMoving(Coefficients c = Coefficients())
         : BaseAlgorithm{c},
           spectrogramSet({.bufferSize = c.bufferSize, .nBands = c.nBands, .nSpectrograms = c.nSpectrograms, .nFolds = c.nFolds, .nonlinearity = c.nonlinearity}),
-          upscale({.factorHorizontal = 2, .factorVertical = 1, .leftBoundaryExcluded = true}),
-          filterMinMax({.filterLength = static_cast<int>(250 * FFTConfiguration::convertNBandsToFFTSize(c.nBands) / c.sampleRate), .nChannels = 1}), //
-          movingMaxMin([&c]() {
+          upscale({.factorHorizontal = 2, .factorVertical = 1, .leftBoundaryExcluded = true}), movingMaxMin([&c]() {
               std::vector<MovingMaxMinHorizontal::Coefficients> cMMM(c.nSpectrograms - 1);
               for (auto i = 0; i < c.nSpectrograms - 1; i++)
               {
@@ -49,9 +46,8 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
 
     SpectrogramSetZeropad spectrogramSet;
     Upscale2DLinear upscale;
-    FilterMinMaxLemire filterMinMax;
     VectorAlgo<MovingMaxMinHorizontal> movingMaxMin;
-    DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, filterMinMax, movingMaxMin)
+    DEFINE_MEMBER_ALGORITHMS(spectrogramSet, upscale, movingMaxMin)
 
   private:
     void inline processAlgorithm(Input input, Output output)
@@ -87,10 +83,10 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
 
     void resetVariables() final
     {
-        leftBoundaries.setZero();
+        leftBoundaries.setConstant(1e6f); // sentinel for "no prior frame" in dB: large enough that .min(buffer) always discards it, finite to avoid inf-inf NaN in upscale's vertical interp
         for (auto &spectrogram : spectrogramBuffer)
         {
-            spectrogram.setZero();
+            spectrogram.setConstant(1e6f); // history sentinel: shifted-in cols at frame 0 must lose the .min(buffer), same reason as leftBoundaries
         }
     }
 
