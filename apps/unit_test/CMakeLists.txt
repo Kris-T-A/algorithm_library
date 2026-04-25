@@ -60,8 +60,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/../../i
 # The project depends on the following libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE AlgorithmLibrary gtest gtest_main fmt::fmt)
 
-# All users of this library will need at least C++14
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_14)
+# C++17 is required, not just preferred: nlohmann_json's from_json for std::vector of macro-generated
+# MemberCoefficients structs (DEFINE_MEMBER_ALGORITHMS over a VectorAlgo<...> whose element also has
+# member algorithms - e.g. SpectrogramSetWOLA -> VectorAlgo<SpectrogramNonlinear> -> VectorAlgo<Filterbank>)
+# relies on copy elision to skip move-construct-then-destruct on intermediate temporaries. Under C++14
+# at -O0 those moves and matching destructors actually run, and the implicit move constructor of the
+# generated struct leaves the source's nested vector header in a half-cleared state, so the destructor
+# segfaults walking _M_start..nullptr. C++17's mandatory copy elision skips that dance entirely.
+# Repro: drop to cxx_std_14, clean rebuild, run SpectrogramAdaptive.InterfaceEnvelope or SpectrogramSet.Interface.
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 # define this to detect dynamic memory allocation in debug mode
 target_compile_definitions(${PROJECT_NAME} PRIVATE EIGEN_RUNTIME_NO_MALLOC)
