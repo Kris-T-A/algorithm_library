@@ -1,5 +1,9 @@
 #include "activity_detection/activity_detection_noise_estimation.h"
+#include "adaptive_predictor/adaptive_predictor_kalman_freq_domain.h"
 #include "adaptive_predictor/adaptive_predictor_kalman_time_domain.h"
+#include "adaptive_predictor/adaptive_predictor_nlms_freq_domain.h"
+#include "adaptive_predictor/adaptive_predictor_nlms_moment.h"
+#include "adaptive_predictor/adaptive_predictor_nlms_moment_time_domain.h"
 #include "adaptive_predictor/adaptive_predictor_nlms_time_domain.h"
 #include "audio_attenuate/audio_attenuate_adaptive.h"
 #include "audio_attenuate/decimate_gain.h"
@@ -36,6 +40,7 @@
 #include "spectrogram/spectrogram_filterbank.h"
 #include "spectrogram/spectrogram_min_max.h"
 #include "spectrogram/spectrogram_nonlinear.h"
+#include "spectrogram_adaptive/spectrogram_adaptive_moving.h"
 #include "spline/spline_cubic.h"
 
 // Macro for defining timing test using google benchmark framework
@@ -92,6 +97,10 @@ DEFINE_BENCHMARK_ALGORITHM(StreamingMinLemire)
 DEFINE_BENCHMARK_ALGORITHM(DCRemoverFirstOrder)
 DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorNLMSTimeDomain)
 DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorKalmanTimeDomain)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorNLMSMomentumTimeDomain)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorNLMSFreqDomain)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorNLMSMomentum)
+DEFINE_BENCHMARK_ALGORITHM(AdaptivePredictorKalmanFreqDomain)
 DEFINE_BENCHMARK_ALGORITHM(LogScale)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionNoiseEstimation)
 DEFINE_BENCHMARK_ALGORITHM(ActivityDetectionFusedNoiseEstimation)
@@ -106,6 +115,7 @@ DEFINE_BENCHMARK_ALGORITHM(SpectralCompressorWOLA)
 DEFINE_BENCHMARK_ALGORITHM(SpectralCompressorAdaptive)
 DEFINE_BENCHMARK_ALGORITHM(SpectralSelector)
 DEFINE_BENCHMARK_ALGORITHM(SpectrogramMinMax)
+DEFINE_BENCHMARK_ALGORITHM(SpectrogramAdaptiveMoving)
 
 // benchmark inverse FFT
 static void FFTInverse_process(benchmark::State &state)

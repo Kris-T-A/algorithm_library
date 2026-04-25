@@ -8,16 +8,19 @@
 //   state model:  w[n+1] = w[n] + v[n],  v ~ N(0, Q = q*I)
 //   measurement:  x[n]   = w[n]^T u[n] + r[n],  r ~ N(0, R = regularization)
 //
-// Per-sample update:
-//   covariance += q*I               (prior)
+// Per-sample update (exploiting symmetry of covariance):
+//   covariance += q*I               (prior; diagonal only)
 //   yhat  = w^T u
 //   e     = x - yhat                (innovation)
-//   Pu    = covariance * u
+//   Pu    = covariance * u          (reads upper triangle only; covariance is symmetric)
 //   S     = u^T Pu + R
-//   K     = Pu / S
-//   w    += K * e
-//   covariance -= K * Pu^T          (standard rank-1 update)
-//   covariance  = 0.5 (covariance + covariance^T)   (per-sample symmetrization)
+//   w    += (e / S) * Pu            (K = Pu/S is implicit)
+//   covariance -= Pu * Pu^T / S     (symmetric rank-1 update; writes upper triangle only)
+//
+// Since K = Pu / S, the covariance update K * Pu^T = (Pu * Pu^T) / S is symmetric by construction,
+// so only the upper triangle is maintained. selfadjointView<Upper>() is used for both the
+// matrix-vector product and the rank-1 update, halving the work compared to a general-matrix
+// formulation and eliminating the per-sample symmetrization pass.
 //
 // Initial state (construction and reset): w = 0, covariance = I (diffuse prior).
 // Mapping convergenceTimeMs -> q: tauSamples = convergenceTimeMs * 1e-3 * sampleRate;
@@ -36,7 +39,6 @@ class AdaptivePredictorKalmanTimeDomain : public AlgorithmImplementation<Adaptiv
         delayBuffer.setZero(bufferSize);
         u.setZero(N);
         Pu.setZero(N);
-        K.setZero(N);
         writeIndex = 0;
         onParametersChanged();
     }
@@ -62,38 +64,26 @@ class AdaptivePredictorKalmanTimeDomain : public AlgorithmImplementation<Adaptiv
                 u(k) = delayBuffer(idx);
             }
 
-            // Prior: covariance += q * I.
+            // Prior: covariance += q * I (diagonal).
             covariance.diagonal().array() += q;
 
             // Innovation.
             const float yhat = weights.dot(u);
             const float e = input(n) - yhat;
 
-            // Pu = covariance * u (no-alias matrix-vector product).
-            Pu.noalias() = covariance * u;
+            // Pu = covariance * u, exploiting symmetry (reads upper triangle only).
+            Pu.noalias() = covariance.selfadjointView<Eigen::Upper>() * u;
 
-            // Innovation variance.
+            // Innovation variance and inverse.
             const float S = u.dot(Pu) + R;
+            const float invS = 1.f / S;
 
-            // Kalman gain.
-            K = Pu / S;
+            // State update: weights += K * e, with K = Pu * invS (K not materialized).
+            weights += (e * invS) * Pu;
 
-            // State update.
-            weights += K * e;
-
-            // Covariance update: covariance -= K * Pu^T (rank-1).
-            covariance.noalias() -= K * Pu.transpose();
-
-            // Per-sample symmetrization: enforce covariance = 0.5 (covariance + covariance^T).
-            for (int i = 0; i < N; i++)
-            {
-                for (int j = i + 1; j < N; j++)
-                {
-                    const float avg = 0.5f * (covariance(i, j) + covariance(j, i));
-                    covariance(i, j) = avg;
-                    covariance(j, i) = avg;
-                }
-            }
+            // Covariance update: covariance -= Pu * Pu^T / S, as a symmetric rank-1 update on
+            // the upper triangle. Symmetry is preserved by construction — no symmetrization needed.
+            covariance.selfadjointView<Eigen::Upper>().rankUpdate(Pu, -invS);
 
             output(n) = outputResidual ? e : yhat;
 
@@ -121,16 +111,14 @@ class AdaptivePredictorKalmanTimeDomain : public AlgorithmImplementation<Adaptiv
 
     size_t getDynamicSizeVariables() const final
     {
-        return weights.size() * sizeof(float) + covariance.size() * sizeof(float) + delayBuffer.getDynamicMemorySize() + u.size() * sizeof(float) + Pu.size() * sizeof(float) +
-               K.size() * sizeof(float);
+        return weights.size() * sizeof(float) + covariance.size() * sizeof(float) + delayBuffer.getDynamicMemorySize() + u.size() * sizeof(float) + Pu.size() * sizeof(float);
     }
 
     Eigen::VectorXf weights;    // w, length N
-    Eigen::MatrixXf covariance; // P, N x N
+    Eigen::MatrixXf covariance; // P, N x N; only the upper triangle is maintained
     Eigen::ArrayXf delayBuffer; // circular buffer, length N + decorrelationDelay
     Eigen::VectorXf u;          // regressor scratch, length N
     Eigen::VectorXf Pu;         // covariance * u scratch, length N
-    Eigen::VectorXf K;          // Kalman gain scratch, length N
 
     int bufferSize;
     int writeIndex;

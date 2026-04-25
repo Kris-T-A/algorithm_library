@@ -41,7 +41,6 @@ TEST(AdaptivePredictor, ConvergesAndReducesPeriodicEnergy)
 
     AdaptivePredictorNLMSTimeDomain::Coefficients c;
     c.sampleRate = fs;
-    c.filterLength = 32;
     c.decorrelationDelay = 1;
     c.outputMode = AdaptivePredictorNLMSTimeDomain::Coefficients::RESIDUAL;
     AdaptivePredictorNLMSTimeDomain algo(c);
@@ -77,7 +76,6 @@ TEST(AdaptivePredictor, ResidualPlusPredictionEqualsInput)
 
     AdaptivePredictorNLMSTimeDomain::Coefficients cR;
     cR.sampleRate = fs;
-    cR.filterLength = 16;
     cR.decorrelationDelay = 1;
     cR.outputMode = AdaptivePredictorNLMSTimeDomain::Coefficients::RESIDUAL;
 
@@ -107,7 +105,6 @@ TEST(AdaptivePredictor, ConvergenceTimeAffectsAdaptation)
 
     AdaptivePredictorNLMSTimeDomain::Coefficients c;
     c.sampleRate = fs;
-    c.filterLength = 32;
     c.decorrelationDelay = 1;
     c.outputMode = AdaptivePredictorNLMSTimeDomain::Coefficients::RESIDUAL;
     AdaptivePredictorNLMSTimeDomain algo(c);
