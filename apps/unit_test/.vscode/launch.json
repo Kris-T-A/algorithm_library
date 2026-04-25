@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug (no args)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb"
+        },
+        {
+            "name": "Debug with gtest filter",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["--gtest_filter=${input:gtestFilter}"],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "gtestFilter",
+            "type": "promptString",
+            "description": "gtest filter pattern",
+            "default": "*"
+        }
+    ]
+}
