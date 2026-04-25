@@ -15,7 +15,7 @@ struct MovingMaxMinVerticalConfiguration
     struct Coefficients
     {
         int filterLength = 5; // number of samples to filter over the first dimension
-        int nChannels = 1000; // length of first dimension
+        int nChannels = 100; // length of first dimension
         DEFINE_TUNABLE_COEFFICIENTS(filterLength, nChannels);
     };
 
