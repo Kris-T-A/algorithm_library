@@ -1,0 +1,3 @@
+#include "spectrogram_adaptive_set/spectrogram_adaptive_set_min.h"
+
+DEFINE_ALGORITHM_CONSTRUCTOR(SpectrogramAdaptiveSet, SpectrogramAdaptiveSetMin, SpectrogramAdaptiveSetConfiguration)
