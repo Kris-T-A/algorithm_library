@@ -63,8 +63,6 @@ class ConvertRGBAOcean : public AlgorithmImplementation<ConvertRGBAConfiguration
         output[3] = C.alpha; // A
     }
 
-    int rowOutput;
-
     friend BaseAlgorithm;
 };
 
@@ -125,8 +123,6 @@ class ConvertRGBAParula : public AlgorithmImplementation<ConvertRGBAConfiguratio
         output[3] = C.alpha; // A
     }
 
-    int rowOutput;
-
     friend BaseAlgorithm;
 };
 
@@ -179,8 +175,6 @@ class ConvertRGBAViridis : public AlgorithmImplementation<ConvertRGBAConfigurati
         }
         output[3] = C.alpha; // A
     }
-
-    int rowOutput;
 
     friend BaseAlgorithm;
 };
@@ -235,8 +229,6 @@ class ConvertRGBAPlasma : public AlgorithmImplementation<ConvertRGBAConfiguratio
         output[3] = C.alpha; // A
     }
 
-    int rowOutput;
-
     friend BaseAlgorithm;
 };
 
@@ -289,8 +281,6 @@ class ConvertRGBAMagma : public AlgorithmImplementation<ConvertRGBAConfiguration
         }
         output[3] = C.alpha; // A
     }
-
-    int rowOutput;
 
     friend BaseAlgorithm;
 };

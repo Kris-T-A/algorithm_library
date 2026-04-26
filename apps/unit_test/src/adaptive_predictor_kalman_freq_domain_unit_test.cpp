@@ -22,7 +22,7 @@ ArrayXf makeStepFrequencySinusoid(int nSamples, float sampleRate, float f1, floa
     ArrayXf noise = ArrayXf::Random(nSamples) * noiseAmp;
     ArrayXf signal(nSamples);
     double phase = 0.0;
-    const double twoPi = 2.0 * 3.14159265358979323846;
+    const double twoPi = 2.0 * M_PI;
     for (int n = 0; n < nSamples; n++)
     {
         const double f = (n < nStep) ? static_cast<double>(f1) : static_cast<double>(f2);

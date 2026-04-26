@@ -1,0 +1,4 @@
+# Auto-detect text vs binary, normalize text files to LF in the index AND in the
+# working tree on every platform. This avoids CRLF/LF round-trip warnings on
+# Windows and keeps source files identical on Windows and Linux checkouts.
+* text=auto eol=lf

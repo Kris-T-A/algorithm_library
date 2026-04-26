@@ -104,6 +104,9 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>
 # With MSVC, enforce C++20 and enable natvis files to improve debugging experience and increase warning level
 if(MSVC)
   target_sources(${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${Eigen_SOURCE_DIR}/debug/msvc/eigen.natvis>)
+  # MSVC's <cmath> only exposes M_PI and friends if _USE_MATH_DEFINES is set. PUBLIC so it propagates
+  # to consumers that include our headers (e.g. dc_remover_first_order.h uses M_PI).
+  target_compile_definitions(${PROJECT_NAME} PUBLIC _USE_MATH_DEFINES)
   # suppress warnings from 3rd party libraries - "C4100": unreferenced formal parameter, "C4127": conditional expression is constant, "C4459": Suppress 'declaration of 'var'
   # hides global declaration'
   target_compile_options(${PROJECT_NAME} PUBLIC /fp:fast /W4 -wd4127 -wd4100 -wd4459 /std:c++20) # we enforce C++20 for MSVC since it is needed for designated initializers lists. GCC and Clang already implements this in C++14 so there it is not needed.

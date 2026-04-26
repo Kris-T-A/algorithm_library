@@ -1,7 +1,7 @@
 #include "scale_transform/log_scale.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
-#include <fmt/ranges.h>
+#include <fmt/ostream.h>
 #include <iostream>
 
 using namespace Eigen;
@@ -20,12 +20,13 @@ TEST(ScaleTransform, getters)
     algo.setCoefficients(c);
     ArrayXf centerFreqs = algo.getCenterFrequencies();
     fmt::print("Sample rate: {} Hz\n", c.inputEnd * 2);
-    fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), centerFreqs);
+    fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), fmt::streamed(centerFreqs));
 
     c.transformType = c.LOGARITHMIC;
     algo.setCoefficients(c);
     centerFreqs = algo.getCenterFrequencies();
-    fmt::print("{} Logarithmic Center frequencies (Hz): {}\n", centerFreqs.size(), (centerFreqs * 1000).round() / 1000); // round to 3 decimals
+    ArrayXf rounded = (centerFreqs * 1000).round() / 1000; // round to 3 decimals
+    fmt::print("{} Logarithmic Center frequencies (Hz): {}\n", centerFreqs.size(), fmt::streamed(rounded));
 
     fmt::print("\nSetting new sample rate...\n");
 
@@ -35,12 +36,12 @@ TEST(ScaleTransform, getters)
     algo.setCoefficients(c);
     fmt::print("Sample rate: {} Hz\n", c.inputEnd * 2);
     centerFreqs = algo.getCenterFrequencies();
-    fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), centerFreqs);
+    fmt::print("{} Mel Center frequencies (Hz): {}\n", centerFreqs.size(), fmt::streamed(centerFreqs));
 
     c.transformType = c.LOGARITHMIC;
     algo.setCoefficients(c);
     centerFreqs = algo.getCenterFrequencies();
-    fmt::print("{} Logarithmic Center frequencies (Hz): {}\n", centerFreqs.size(), (centerFreqs)); // round to 3 decimals
+    fmt::print("{} Logarithmic Center frequencies (Hz): {}\n", centerFreqs.size(), fmt::streamed(centerFreqs));
 }
 
 // process ScaleTransform with an input of ones, and invert the output. Check the inverse is equal to input (This is only true due to the simple input and not in general)

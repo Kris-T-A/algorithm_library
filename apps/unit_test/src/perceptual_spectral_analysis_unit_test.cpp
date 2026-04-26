@@ -2,7 +2,7 @@
 #include "perceptual_spectral_analysis/perceptual_nonlinear_spectrogram.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
-#include <fmt/ranges.h>
+#include <fmt/ostream.h>
 
 using namespace Eigen;
 
@@ -27,8 +27,8 @@ TEST(PerceptualSpectralAnalysis, ProcessPublic)
 TEST(PerceptualSpectralAnalysis, GetFrequencies)
 {
     PerceptualAdaptiveSpectrogram algo;
-    auto centerFrequencies = algo.getCenterFrequencies();
-    fmt::print("Center frequencies: {}\n", (centerFrequencies * 100).round() / 100);
+    Eigen::ArrayXf centerFrequencies = (algo.getCenterFrequencies() * 100).round() / 100;
+    fmt::print("Center frequencies: {}\n", fmt::streamed(centerFrequencies));
 }
 
 TEST(PerceptualSpectralAnalysis, MemorySize)
@@ -36,7 +36,7 @@ TEST(PerceptualSpectralAnalysis, MemorySize)
     PerceptualAdaptiveSpectrogram algo;
     auto c = algo.getCoefficients();
     c.sampleRate = 48000.f;
-    c.bufferSize = .032 * c.sampleRate; // set buffer size to 32 ms
+    c.bufferSize = static_cast<int>(0.032f * c.sampleRate); // set buffer size to 32 ms
     c.nBands = 1025;
     c.frequencyMin = 40.f;
     c.frequencyMax = 20000.f;

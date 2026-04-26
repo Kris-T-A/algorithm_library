@@ -64,8 +64,8 @@ class SpectrogramAdaptiveUpscale : public AlgorithmImplementation<SpectrogramAda
 
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
-            const int newCols = spectrogramOut[iFB].cols();
-            const int currentCols = spectrogramRaw[iFB].cols();
+            const int newCols = static_cast<int>(spectrogramOut[iFB].cols());
+            const int currentCols = static_cast<int>(spectrogramRaw[iFB].cols());
             const int shiftCols = currentCols - newCols;
             assert(shiftCols > 0);
             spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols);    // copy prevous frames

@@ -61,7 +61,7 @@ TEST(SpectrogramAdaptive, SinePeakLocation)
     ArrayXf signal(nSamples);
     for (int n = 0; n < nSamples; ++n)
     {
-        signal(n) = std::sin(2.0 * M_PI * freqHz * n / c.sampleRate);
+        signal(n) = std::sin(2.f * static_cast<float>(M_PI) * freqHz * n / c.sampleRate);
     }
 
     ArrayXXf output(c.nBands, nOutputFrames);

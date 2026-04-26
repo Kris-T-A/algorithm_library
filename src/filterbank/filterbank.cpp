@@ -62,7 +62,7 @@ Eigen::ArrayXf getAnalysisWindow(const FilterbankConfiguration::Coefficients &c)
 {
     const int frameSize = FilterbankConfiguration::calculateFrameSize(c);
     Eigen::ArrayXf window = (c.nFolds > 1) ? sinc(frameSize, 2) * kaiser(frameSize, 10) : hann(frameSize);
-    window /= frameSize / 4; // scale so sinuoid at amplitude 1 is at 0dB magnitude
+    window /= static_cast<float>(frameSize / 4); // scale so sinuoid at amplitude 1 is at 0dB magnitude
     return window;
 }
 

@@ -154,8 +154,8 @@ class AdaptivePredictorNLMSMomentum : public AlgorithmImplementation<AdaptivePre
                     // Momentum & adaptive step.
                     const float Vu = loopbackVariance(k);
                     const float p = momentums(k) + Lf * coefficientVariance(k);
-                    float q = p / (Lf * nearendVariance(k) + (Lf + 2.f) * p * Vu + 1e-30);
-                    const float qCap = 1.f / (Lf * Vu + 1e-30);
+                    float q = p / (Lf * nearendVariance(k) + (Lf + 2.f) * p * Vu + 1e-30f);
+                    const float qCap = 1.f / (Lf * Vu + 1e-30f);
                     if (q > qCap) { q = qCap; }
                     momentums(k) = std::max((1.f - q * Vu) * p, kMomentumFloor);
 

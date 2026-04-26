@@ -42,7 +42,7 @@ TEST(AudioAttenuate, ImpulseTest)
     c.bufferSize = 1024;
     AudioAttenuate algo(c);
 
-    int impulseIndex = c.bufferSize * 1.5;
+    int impulseIndex = c.bufferSize * 3 / 2;
     int expectedDelay = 3 * c.bufferSize + 3 * c.bufferSize / 8 + impulseIndex; // delay of algorithm is delay of longest filterbank + audio combiner
     int nFrames = 10;                                                           // number of input buffer sizes to send through algorithm
     Eigen::ArrayXf input(nFrames * c.bufferSize), output(nFrames * c.bufferSize);

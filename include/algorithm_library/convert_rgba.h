@@ -43,7 +43,7 @@ struct ConvertRGBAConfiguration
 
     static bool validOutput(Output output, const Coefficients &c)
     {
-        int nRows4 = output.rows() / 4;
+        Eigen::Index nRows4 = output.rows() / 4;
         bool flag = nRows4 * 4 == output.rows(); // must be multiple of 4
         for (int iCol = 0; iCol < output.cols(); iCol++) // every 4th value must be equal to alpha
         {

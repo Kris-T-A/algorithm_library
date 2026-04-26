@@ -42,8 +42,8 @@ class SpectrogramAdaptiveEnvelope : public AlgorithmImplementation<SpectrogramAd
         spectrogramUpscaled = Eigen::ArrayXXf::Zero(c.nBands, nOutputFrames);
         oldGain = Eigen::ArrayXf::Zero(c.nBands);
         int nFB = C.nSpectrograms - 2;
-        int nRows = spectrogramRaw[nFB].rows();
-        int nCols = spectrogramOut[nFB].cols() + 1;
+        int nRows = static_cast<int>(spectrogramRaw[nFB].rows());
+        int nCols = static_cast<int>(spectrogramOut[nFB].cols()) + 1;
         maxValue.resize(nRows, nCols);
     }
 
@@ -62,8 +62,8 @@ class SpectrogramAdaptiveEnvelope : public AlgorithmImplementation<SpectrogramAd
 
         for (auto iFB = 1; iFB < static_cast<int>(spectrogramOut.size()); iFB++)
         {
-            const int newCols = spectrogramOut[iFB].cols();
-            const int currentCols = spectrogramRaw[iFB].cols();
+            const int newCols = static_cast<int>(spectrogramOut[iFB].cols());
+            const int currentCols = static_cast<int>(spectrogramRaw[iFB].cols());
             const int shiftCols = currentCols - newCols;
             assert(shiftCols > 0);
             spectrogramRaw[iFB].leftCols(shiftCols) = spectrogramRaw[iFB].rightCols(shiftCols);    // copy prevous frames
@@ -73,8 +73,8 @@ class SpectrogramAdaptiveEnvelope : public AlgorithmImplementation<SpectrogramAd
         }
 
         int nFB = C.nSpectrograms - 2;
-        int nRows = spectrogramRaw[nFB].rows();
-        int nCols = spectrogramOut[nFB].cols() + 1;
+        int nRows = static_cast<int>(spectrogramRaw[nFB].rows());
+        int nCols = static_cast<int>(spectrogramOut[nFB].cols()) + 1;
         int upRow = positivePow2(C.nSpectrograms - 1 - nFB); // 1
         int upCol = positivePow2(nFB);                       // 8
         maxValue(0, 0) = oldGain.head(1 + upCol / 2).maxCoeff();

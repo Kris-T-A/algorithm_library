@@ -1,7 +1,7 @@
 #include "critical_bands/critical_bands_bark.h"
 #include "unit_test.h"
 #include "gtest/gtest.h"
-#include <fmt/ranges.h>
+#include <fmt/ostream.h>
 
 using namespace Eigen;
 
@@ -22,10 +22,10 @@ TEST(CriticalBandsBark, getters)
     fmt::print("Number of critical bands: {}\n", nCritBands);
 
     ArrayXf centerFreqs = CriticalBandsConfiguration::getCenterFrequencies(sampleRate);
-    fmt::print("Center frequencies (Hz): {}\n", centerFreqs);
+    fmt::print("Center frequencies (Hz): {}\n", fmt::streamed(centerFreqs));
 
     ArrayXf cornerFreqs = CriticalBandsConfiguration::getCornerFrequencies(sampleRate);
-    fmt::print("Corner frequencies (Hz): {}\n", cornerFreqs);
+    fmt::print("Corner frequencies (Hz): {}\n", fmt::streamed(cornerFreqs));
 
     fmt::print("Setting new sample rate...\n");
 
@@ -35,10 +35,10 @@ TEST(CriticalBandsBark, getters)
     fmt::print("Number of critical bands: {}\n", nCritBands);
 
     centerFreqs = CriticalBandsConfiguration::getCenterFrequencies(sampleRate);
-    fmt::print("Center frequencies (Hz): {}\n", centerFreqs);
+    fmt::print("Center frequencies (Hz): {}\n", fmt::streamed(centerFreqs));
 
     cornerFreqs = CriticalBandsConfiguration::getCornerFrequencies(sampleRate);
-    fmt::print("Corner frequencies (Hz): {}\n", cornerFreqs);
+    fmt::print("Corner frequencies (Hz): {}\n", fmt::streamed(cornerFreqs));
 }
 
 TEST(CriticalBandsBark, inverse)
