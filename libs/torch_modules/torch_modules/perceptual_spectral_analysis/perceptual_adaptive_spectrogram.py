@@ -1,6 +1,6 @@
 """PerceptualAdaptiveSpectrogram — torch port.
 
-Two public modules (the second is added in a follow-up task):
+Two public modules:
 - ``PerceptualAdaptiveSpectrogramStreaming`` — stateful, per-chunk; matches the C++.
 - ``PerceptualAdaptiveSpectrogram`` — stateless wrapper for full-clip / training use.
 

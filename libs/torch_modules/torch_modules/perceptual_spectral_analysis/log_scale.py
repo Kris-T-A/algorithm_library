@@ -91,10 +91,10 @@ class LogScale(nn.Module):
 
             weights[i, i_mid] = 0.0  # full weight (linear 1.0 → 0 dB)
             dist_left = float(i_mid - i_start)
-            for i_bin in range(i_start, i_mid):
-                # Linear weight: 1 - |i_bin - i_mid| / dist_left, in (0, 1)
-                lin_weight = np.float32(1.0 - (i_mid - i_bin) / dist_left)
-                weights[i, i_bin] = _energy_to_db(np.array([lin_weight]))[0]
+            # Skip i_bin = i_start: lin_weight = 0 → log10(0) = -inf, identical to the default sentinel fill.
+            for i_bin in range(i_start + 1, i_mid):
+                lin_weight = 1.0 - (i_mid - i_bin) / dist_left
+                weights[i, i_bin] = float(_energy_to_db(np.array([lin_weight]))[0])
             if i_end > i_mid:
                 dist_right = float(i_end - i_mid)
                 for i_bin in range(i_mid + 1, i_end):

@@ -154,7 +154,7 @@ class SpectrogramAdaptiveMoving(nn.Module):
         super().__init__()
 
         if n_folds != 1:
-            raise NotImplementedError("Only n_folds=1 is supported.")
+            raise ValueError(f"only n_folds=1 is supported in v1, got {n_folds}")
 
         self.buffer_size = buffer_size
         self.n_bands = n_bands
@@ -310,7 +310,7 @@ class SpectrogramAdaptiveMoving(nn.Module):
             dtype=dtype,
         )
 
-        self._allocated_batch_shape = leading
+        self._allocated_batch_shape = tuple(leading)
 
     # ------------------------------------------------------------------
     # FFT (overlap-save, single frame)
