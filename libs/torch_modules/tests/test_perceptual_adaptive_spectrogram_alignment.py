@@ -3,6 +3,7 @@ import pytest
 import torch
 
 from torch_modules.perceptual_spectral_analysis.perceptual_adaptive_spectrogram import (
+    PerceptualAdaptiveSpectrogram,
     PerceptualAdaptiveSpectrogramStreaming,
 )
 
@@ -101,3 +102,36 @@ def test_constructor_rejects_unsupported_methods():
             sample_rate=48000.0, frequency_min=20.0, frequency_max=20000.0,
             spectral_tilt=False,
         )
+
+
+def test_stateless_equals_streaming_chunked():
+    cfg = dict(
+        buffer_size=256, n_bands=64, n_spectrograms=3, n_folds=1, nonlinearity=0,
+        sample_rate=48000.0, frequency_min=20.0, frequency_max=20000.0, spectral_tilt=False,
+    )
+    n_chunks = 5
+    rng = np.random.default_rng(0)
+    x = torch.from_numpy(rng.standard_normal((1, n_chunks * cfg["buffer_size"])).astype(np.float32))
+
+    stateless = PerceptualAdaptiveSpectrogram(**cfg)
+    out_stateless = stateless(x)
+
+    streaming = PerceptualAdaptiveSpectrogramStreaming(**cfg)
+    streaming.reset()
+    chunks = []
+    for i in range(n_chunks):
+        chunk = x[..., i * cfg["buffer_size"]:(i + 1) * cfg["buffer_size"]]
+        chunks.append(streaming(chunk, detach_state=False))
+    out_streaming = torch.cat(chunks, dim=-1)
+
+    torch.testing.assert_close(out_stateless, out_streaming, atol=1e-6, rtol=1e-6)
+
+
+def test_stateless_rejects_partial_chunks():
+    cfg = dict(
+        buffer_size=256, n_bands=64, n_spectrograms=3, n_folds=1, nonlinearity=0,
+        sample_rate=48000.0, frequency_min=20.0, frequency_max=20000.0, spectral_tilt=False,
+    )
+    module = PerceptualAdaptiveSpectrogram(**cfg)
+    with pytest.raises(ValueError, match="multiple of bufferSize"):
+        module(torch.zeros(1, 300))

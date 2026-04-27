@@ -102,3 +102,33 @@ class PerceptualAdaptiveSpectrogramStreaming(nn.Module):
         # log_scale wants (..., n_inputs); transpose (n_inputs, frames) -> (frames, n_inputs), then back.
         log_scaled = self.log_scale(spectrogram_db.transpose(-1, -2)).transpose(-1, -2)
         return self.moving_max_min(log_scaled)
+
+
+class PerceptualAdaptiveSpectrogram(nn.Module):
+    """Stateless wrapper around ``PerceptualAdaptiveSpectrogramStreaming``.
+
+    Forward expects ``(..., T)`` with ``T`` a positive multiple of ``bufferSize``.
+    Splits the time axis into ``T // bufferSize`` chunks, ``reset()``s the streaming
+    module once before the loop, then runs it per chunk with ``detach_state=False``
+    (so gradients flow across chunks at training time), concatenating outputs
+    along the frame axis.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.streaming = PerceptualAdaptiveSpectrogramStreaming(**kwargs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        buffer_size = self.streaming.buffer_size
+        T = x.shape[-1]
+        if T <= 0 or T % buffer_size != 0:
+            raise ValueError(
+                f"input last dim must be a positive multiple of bufferSize={buffer_size}, got {T}"
+            )
+
+        self.streaming.reset()
+        chunks = []
+        for i in range(T // buffer_size):
+            chunk = x[..., i * buffer_size:(i + 1) * buffer_size]
+            chunks.append(self.streaming(chunk, detach_state=False))
+        return torch.cat(chunks, dim=-1)
