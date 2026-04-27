@@ -24,7 +24,7 @@ struct PerceptualSpectralAnalysisConfiguration
         enum Methods { ADAPTIVE, NONLINEAR };
         Methods method = ADAPTIVE;
         DEFINE_TUNABLE_ENUM(Methods, {{ADAPTIVE, "Adaptive"}, {NONLINEAR, "Nonlinear"}})
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, sampleRate, spectralTilt, nSpectrograms, nFolds, nonlinearity, method)
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, sampleRate, frequencyMin, frequencyMax, spectralTilt, nSpectrograms, nFolds, nonlinearity, method)
     };
 
     struct Parameters
