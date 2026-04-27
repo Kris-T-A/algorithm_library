@@ -19,7 +19,10 @@ struct SpectrogramAdaptiveConfiguration
         int nFolds = 1;           // number of folds: frameSize = nFolds * 2 * (nBands - 1)
         int nonlinearity = 0;     // nonlinearity factor where left/right side of window is reduced by a factor of 2^nonlinearity, 0 = no nonlinearity
         float sampleRate = 16000; // sample rate in Hz
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nSpectrograms, nFolds, nonlinearity, sampleRate)
+        enum Methods { ZEROPAD, MOVING };
+        Methods method = ZEROPAD;
+        DEFINE_TUNABLE_ENUM(Methods, {{ZEROPAD, "Zeropad"}, {MOVING, "Moving"}})
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, nBands, nSpectrograms, nFolds, nonlinearity, sampleRate, method)
     };
 
     struct Parameters
