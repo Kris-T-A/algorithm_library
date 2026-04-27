@@ -427,16 +427,15 @@ class SpectrogramAdaptiveMoving(nn.Module):
         # ----------------------------------------------------------------
         # Build output (mirrors processAlgorithm lines 57-81)
         # ----------------------------------------------------------------
-        n_output_frames = 1 << (self.n_spectrograms - 1)
-        output = torch.empty(
-            B, self.n_bands, n_output_frames,
-            device=x_flat.device, dtype=x_flat.dtype,
-        )
+        # Use a purely functional approach (no in-place writes on tensors that
+        # participate in the autograd graph) so that gradcheck / backward pass works.
+        # current_block tracks the "live" dB output for the current cascade level.
+        # It grows from 1 column → 2 → 4 … as we process each level.
 
         # Level 0: single column, convert to dB.
-        output[..., 0:1] = 10.0 * torch.log10(
+        current_block = 10.0 * torch.log10(
             spectrograms[0].clamp(min=1e-20)
-        )  # spectrograms[0] is (B, n_bands, 1)
+        )  # (B, n_bands, 1)
 
         for iFB in range(self.n_spectrograms - 1):
             prev_cols = 1 << iFB          # 2^iFB
@@ -444,16 +443,16 @@ class SpectrogramAdaptiveMoving(nn.Module):
             current_cols = self.spectrogram_buffer_cols[iFB]
             shift_cols = current_cols - new_cols
 
-            # Build input to upscale: [leftBoundary | output[0..prev_cols-1]]
+            # Build input to upscale: [leftBoundary | current_block[0..prev_cols-1]]
             # left_boundaries has shape (B, n_bands, n_spectrograms-1)
             left_boundary = self.left_boundaries[..., iFB : iFB + 1]  # (B, n_bands, 1)
-            prev_block = output[..., :prev_cols]                        # (B, n_bands, prev_cols)
-            upscale_input = torch.cat([left_boundary, prev_block], dim=-1)
+            # current_block at this point has exactly prev_cols columns
+            upscale_input = torch.cat([left_boundary, current_block], dim=-1)
             # shape: (B, n_bands, prev_cols + 1)
 
-            # Save next left boundary BEFORE upscale overwrites output.
+            # Save next left boundary (last column of current_block) before upscaling.
             # C++: leftBoundaries.col(iFB) = output.col(prevCols - 1)
-            new_left_boundary = output[..., prev_cols - 1 : prev_cols].clone()
+            new_left_boundary = current_block[..., prev_cols - 1 : prev_cols]
             # shape: (B, n_bands, 1)
 
             # 2x horizontal upscale with leftBoundaryExcluded=true.
@@ -469,7 +468,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
             upscaled = torch.stack([even_cols, odd_cols], dim=-1).reshape(
                 B, self.n_bands, new_cols
             )
-            output[..., :new_cols] = upscaled
+            # upscaled is now the upscaled version; update current_block for next iteration.
+            current_block = upscaled
 
             # Save the new left boundary back into state.
             new_lb = new_left_boundary.detach() if detach_state else new_left_boundary
@@ -500,10 +500,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
                 new_sb = new_sb.detach()
             self._set_spectrogram_buffer(iFB, new_sb)
 
-            # Combine: output[0..new_cols-1] = min(output[0..new_cols-1], buffer[0..new_cols-1])
-            output[..., :new_cols] = torch.minimum(
-                output[..., :new_cols], new_sb[..., :new_cols]
-            )
+            # Combine: current_block = min(upscaled, buffer[0..new_cols-1])
+            current_block = torch.minimum(current_block, new_sb[..., :new_cols])
 
         # Reshape back to leading dims.
-        return output.reshape(*leading, self.n_bands, n_output_frames)
+        return current_block.reshape(*leading, self.n_bands, 1 << (self.n_spectrograms - 1))
