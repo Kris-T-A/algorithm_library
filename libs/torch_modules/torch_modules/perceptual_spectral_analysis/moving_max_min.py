@@ -30,7 +30,10 @@ class MovingMaxMinVertical(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         L = self.filter_length
         if L == 1:
-            return x
+            # C++ peculiarity at filter_length=1: output[i] = input[i+1] for i < N-1,
+            # output[N-1] = input[N-1] (last row replicated).
+            # See src/moving_max_min/moving_max_min_vertical.h:48-83. Match for C++ parity.
+            return torch.cat([x[..., 1:, :], x[..., -1:, :]], dim=-2)
 
         # F.max_pool1d operates on the last dim, so transpose, flatten leading dims,
         # pool, then unflatten and transpose back.

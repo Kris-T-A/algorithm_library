@@ -27,9 +27,18 @@ def _numpy_oracle_horizontal(x: np.ndarray, L: int) -> np.ndarray:
 
 
 def _numpy_oracle_vertical(x: np.ndarray, L: int) -> np.ndarray:
-    """Edge-replicate pad by (L-1, L-1) on axis 0, then cascaded max-pool(L) -> min-pool(L)."""
+    """Edge-replicate pad by (L-1, L-1) on axis 0, then cascaded max-pool(L) -> min-pool(L).
+
+    At L=1 the C++ has a peculiarity: output[i] = input[i+1] for i < N-1,
+    output[N-1] = input[N-1] (a one-sample shift with last-row replication).
+    See src/moving_max_min/moving_max_min_vertical.h:48-83.
+    """
     if L == 1:
-        return x.copy()
+        # C++ peculiarity: one-sample shift with last-row replication.
+        out = np.empty_like(x)
+        out[:-1] = x[1:]
+        out[-1] = x[-1]
+        return out
     padded = np.pad(x, ((L - 1, L - 1), (0, 0)), mode="edge")
     max_out = np.lib.stride_tricks.sliding_window_view(padded, L, axis=0).max(axis=-1)
     min_out = np.lib.stride_tricks.sliding_window_view(max_out, L, axis=0).min(axis=-1)
