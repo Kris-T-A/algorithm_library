@@ -10,25 +10,13 @@ from torch import nn
 from torch_modules.interpolation.interpolation_cubic import InterpolationCubic
 
 
-def _fasterlog2(x: np.ndarray) -> np.ndarray:
-    """Bit-twiddling fast log2 — exact mirror of `fasterlog2` in
-    `src/utilities/fastonebigheader.h` lines 199-208.
-
-    The C++ union-punning reads the float bits as uint32, multiplies by
-    ``1.1920928955078125e-7`` (= 2^-23) and subtracts ``126.94269504``.
-    """
-    x = np.asarray(x, dtype=np.float32)
-    bits = x.view(np.uint32).astype(np.float32)
-    return bits * np.float32(1.1920928955078125e-7) - np.float32(126.94269504)
-
-
 def _energy_to_db(x: np.ndarray) -> np.ndarray:
-    """Mirror C++ ``energy2dB(x) = 3.010299956639812f * fasterlog2(x)``.
+    """10 * log10(x) for x ∈ (0, 1] — used to convert linear triangular-window weights to dB.
 
-    Uses the same bit-twiddling fast log2 as the C++ side so that
-    pre-computed triangular weights match the C++ oracle exactly.
+    Mirrors `10 * std::log10` used in `src/scale_transform/log_scale.h`'s constructor.
+    Both implementations precompute these weights at construction time, so exact log10 is fine.
     """
-    return (np.float32(3.010299956639812) * _fasterlog2(x)).astype(np.float32)
+    return (10.0 * np.log10(x)).astype(np.float32)
 
 
 class LogScale(nn.Module):
@@ -89,7 +77,7 @@ class LogScale(nn.Module):
         self.register_buffer("fraction_cubic", torch.from_numpy(fraction_cubic), persistent=False)
         self.interpolation_cubic = InterpolationCubic()
 
-        # Build the dense triangular weight matrix in dB.
+        # Build the dense triangular weight matrix in dB (precomputed at construction; exact log10).
         # weights shape: (n_triangular_bins, n_inputs); -inf outside the triangular window.
         weights = np.full((max(n_triangular_bins, 1), n_inputs), -np.inf, dtype=np.float32)
         # The "max(.., 1)" keeps the buffer non-empty for register_buffer; we mask below.

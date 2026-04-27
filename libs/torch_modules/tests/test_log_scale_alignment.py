@@ -53,11 +53,11 @@ def test_full_alignment_matches_cpp(pal):
         cpp_out[:n_lin + n_cub, :],
         atol=1e-5, rtol=1e-5,
     )
-    # Triangular region uses C++ fasterlog2 vs torch exact log10 — looser tolerance.
+    # Triangular region: both sides now use exact log10, tight tolerance.
     np.testing.assert_allclose(
         torch_out[n_lin + n_cub:, :],
         cpp_out[n_lin + n_cub:, :],
-        atol=1e-1,  # ~0.15 dB drift expected from fasterlog2 approximation in C++
+        atol=1e-5, rtol=1e-5,  # was atol=1e-1 to absorb fasterlog2 drift; both sides now use exact log10
     )
 
 
