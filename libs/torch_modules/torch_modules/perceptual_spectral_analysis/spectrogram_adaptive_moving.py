@@ -1,0 +1,492 @@
+"""Port of ``SpectrogramAdaptiveMoving`` from C++ to PyTorch.
+
+Implements the FFT-cascade spectrogram with progressive 2x upscaling and
+moving-min combination. Mirrors the state layout and algorithm of the C++
+``SpectrogramAdaptiveMoving`` class.
+"""
+from __future__ import annotations
+
+import numpy as np
+import torch
+from torch import nn
+
+from torch_modules.perceptual_spectral_analysis.moving_max_min import (
+    MovingMaxMinHorizontal,
+)
+
+
+def _build_hann_periodic(n: int) -> np.ndarray:
+    """Periodic Hann window of length ``n`` (matches C++ ``hann()`` in functions.h).
+
+    Equivalent to ``np.hanning(n + 1)[:-1]``.  Uses the formula
+    ``0.5 * (1 - cos(2*pi*k/n))`` for k in [0, n).
+    """
+    k = np.arange(n, dtype=np.float64)
+    return (0.5 * (1.0 - np.cos(2.0 * np.pi * k / n))).astype(np.float32)
+
+
+def _build_windows(
+    n_bands: int, n_spectrograms: int, nonlinearity: int
+) -> tuple[dict[tuple[int, int], np.ndarray], float, int]:
+    """Build per-(level, filterbank) analysis windows.
+
+    Returns ``(windows, win_scale, n_filterbanks)`` where:
+    - ``windows[(level, fb)]`` is a float32 ndarray of length ``frame_size``
+      sum-normalised to ``win_scale``.
+    - ``win_scale`` is the sum of the level-0 FB-0 base window.
+    - ``n_filterbanks`` is 1 (nonlinearity == 0) or 3.
+
+    Mirrors the window construction in:
+    - ``FilterbankShared::getAnalysisWindow`` (filterbank.cpp:61-67)
+    - ``SpectrogramNonlinear`` constructor (spectrogram_nonlinear.h:25-47)
+    - ``SpectrogramSetZeropad`` constructor (spectrogram_set_zeropad.h:79-105)
+    """
+    frame_size = 2 * (n_bands - 1)  # nFolds=1 → frameSize = 2*(nBands-1)
+    n_filterbanks = 1 if nonlinearity == 0 else 3
+
+    # Level-0 FB-0: getAnalysisWindow → hann(frameSize) / (frameSize / 4)
+    base = _build_hann_periodic(frame_size) / (frame_size / 4.0)
+    win_scale = float(base.sum())  # SpectrogramSetZeropad uses sum, not energy
+
+    windows: dict[tuple[int, int], np.ndarray] = {}
+
+    if n_filterbanks == 1:
+        # Only FB 0 at every level.
+        windows[(0, 0)] = base.copy()
+
+        for iSG in range(1, n_spectrograms):
+            stride = 1 << iSG
+            win_small_size = frame_size // stride
+            # Map(window.data, winSmallSize, InnerStride(stride)) = window[::stride][:winSmallSize]
+            small = base[::stride][:win_small_size]
+            window = np.zeros(frame_size, dtype=np.float32)
+            window[-win_small_size:] = small
+            window_sum = window.sum()
+            window *= win_scale / window_sum
+            windows[(iSG, 0)] = window
+
+    else:
+        # Asymmetric windows built by SpectrogramNonlinear for level 0.
+        stride_nl = 1 << nonlinearity
+        frame_size_small = frame_size // stride_nl
+        # windowSmall = base[::stride_nl][:frameSizeSmall]
+        window_small_nl = base[::stride_nl][:frame_size_small]
+
+        # FB 1: asymmetric left — zero the left quarter, fill with left half of small window.
+        # C++: window.head((frameSize-frameSizeSmall)/2).setZero()
+        #       window.segment((frameSize-frameSizeSmall)/2, frameSizeSmall/2) = windowSmall.head(frameSizeSmall/2)
+        zero_part = (frame_size - frame_size_small) // 2
+        win1 = base.copy()
+        win1[:zero_part] = 0.0
+        win1[zero_part : zero_part + frame_size_small // 2] = window_small_nl[: frame_size_small // 2]
+        # (Energy normalization from SpectrogramNonlinear is skipped — it gets
+        #  overridden by SpectrogramSetZeropad's sum-normalization below.)
+
+        # FB 2: asymmetric right — zero the right quarter, fill with right half of small window.
+        # C++: window.tail((frameSize-frameSizeSmall)/2).setZero()
+        #       window.segment(frameSize/2, frameSizeSmall/2) = windowSmall.tail(frameSizeSmall/2)
+        win2 = base.copy()
+        win2[frame_size - zero_part :] = 0.0
+        win2[frame_size // 2 : frame_size // 2 + frame_size_small // 2] = window_small_nl[
+            -(frame_size_small // 2) :
+        ]
+
+        # Sum-normalize all level-0 filterbanks to win_scale.
+        windows[(0, 0)] = (base * (win_scale / base.sum())).astype(np.float32)
+        windows[(0, 1)] = (win1 * (win_scale / win1.sum())).astype(np.float32)
+        windows[(0, 2)] = (win2 * (win_scale / win2.sum())).astype(np.float32)
+
+        # Levels iSG > 0: stride the level-0 PRE-sum-norm source window for each FB,
+        # place at tail of zeros, then sum-normalize.
+        # The source is the window AS BUILT BY SpectrogramNonlinear (before SpectrogramSetZeropad
+        # sum-normalises it), which is the same at every level since bufferSize doesn't affect
+        # the window for nFolds=1.
+        src_windows = [base, win1, win2]
+        for iSG in range(1, n_spectrograms):
+            stride = 1 << iSG
+            win_small_size = frame_size // stride
+            for fb_idx, src in enumerate(src_windows):
+                small = src[::stride][:win_small_size]
+                window = np.zeros(frame_size, dtype=np.float32)
+                window[-win_small_size:] = small
+                window *= win_scale / window.sum()
+                windows[(iSG, fb_idx)] = window.astype(np.float32)
+
+    return windows, win_scale, n_filterbanks
+
+
+class SpectrogramAdaptiveMoving(nn.Module):
+    """Streaming adaptive spectrogram via FFT cascade + progressive upscaling.
+
+    Mirrors ``SpectrogramAdaptiveMoving`` in
+    ``src/spectrogram_adaptive/spectrogram_adaptive_moving.h``.
+
+    Parameters
+    ----------
+    buffer_size:
+        Input frame length (samples).  Must be a power of two.
+    n_bands:
+        Number of FFT output bands = ``frameSize/2 + 1 = n_bands``.
+        For the public API this is ``2*bufferSize + 1``; for internal use
+        it can be set independently.
+    n_spectrograms:
+        Number of cascade levels (default 3 → output has 4 columns).
+    n_folds:
+        Number of FFT folds (only 1 is supported).
+    nonlinearity:
+        Asymmetric-window nonlinearity order (0 = off, 1 = 2× time-res).
+
+    Forward
+    -------
+    Input:  ``(..., buffer_size)``
+    Output: ``(..., n_bands, 2^(n_spectrograms-1))`` in dB.
+    """
+
+    def __init__(
+        self,
+        *,
+        buffer_size: int,
+        n_bands: int,
+        n_spectrograms: int = 3,
+        n_folds: int = 1,
+        nonlinearity: int = 0,
+    ) -> None:
+        super().__init__()
+
+        if n_folds != 1:
+            raise NotImplementedError("Only n_folds=1 is supported.")
+
+        self.buffer_size = buffer_size
+        self.n_bands = n_bands
+        self.n_spectrograms = n_spectrograms
+        self.n_folds = n_folds
+        self.nonlinearity = nonlinearity
+
+        # frame_size = nFolds * 2 * (nBands - 1) = 2 * (n_bands - 1)
+        self.frame_size = 2 * (n_bands - 1)
+
+        # Build analysis windows and register as buffers.
+        win_dict, self._win_scale, self.n_filterbanks = _build_windows(
+            n_bands, n_spectrograms, nonlinearity
+        )
+        for (level, fb), w in win_dict.items():
+            self.register_buffer(
+                f"window_{level}_{fb}", torch.from_numpy(w)
+            )
+
+        # Per-level MovingMaxMinHorizontal instances (levels 1..n_spectrograms-1).
+        # Level iFB (0-indexed) has filter_length = 2^(iFB+1).
+        self.moving_max_min = nn.ModuleList(
+            [
+                MovingMaxMinHorizontal(
+                    filter_length=1 << (iFB + 1),
+                    n_channels=n_bands,
+                )
+                for iFB in range(n_spectrograms - 1)
+            ]
+        )
+
+        # Pre-compute spectrogram_buffer column counts for each level 1..n_spectrograms-1.
+        # C++: nCols = 1 + (delayRef - delay) / bufferSize_i
+        # (the +positivePow2(i)-1 and -positivePow2(i)+1 cancel out)
+        delay_ref = self.frame_size // 2  # = n_bands - 1
+        self.spectrogram_buffer_cols: list[int] = []
+        for iSG in range(1, n_spectrograms):
+            buf_size_iSG = buffer_size >> iSG
+            delay_iSG = delay_ref >> iSG
+            n_cols = 1 + (delay_ref - delay_iSG) // buf_size_iSG
+            self.spectrogram_buffer_cols.append(n_cols)
+
+        # Register placeholder buffers for spectrogram_buffer (indices 0..n_spectrograms-2).
+        # They will be properly allocated on first forward.
+        for i in range(n_spectrograms - 1):
+            self.register_buffer(f"spectrogram_buffer_{i}", torch.empty(0), persistent=False)
+
+        # left_boundaries: (B*, n_bands, n_spectrograms-1) — placeholder.
+        self.register_buffer("left_boundaries", torch.empty(0), persistent=False)
+
+        # Time buffers: per (level, fb) → stored as list of lists; lazy-allocated.
+        # Not registered as module buffers because they are 3D (need batch dim).
+        # We store them as a flat list indexed by level*n_filterbanks + fb.
+        self._time_buffers: list[torch.Tensor | None] = [
+            None
+        ] * (n_spectrograms * self.n_filterbanks)
+
+        self._allocated_batch_shape: tuple[int, ...] | None = None
+
+    # ------------------------------------------------------------------
+    # Helpers for buffer registration
+    # ------------------------------------------------------------------
+
+    def _get_spectrogram_buffer(self, i: int) -> torch.Tensor:
+        return getattr(self, f"spectrogram_buffer_{i}")
+
+    def _set_spectrogram_buffer(self, i: int, value: torch.Tensor) -> None:
+        setattr(self, f"spectrogram_buffer_{i}", value)
+
+    # ------------------------------------------------------------------
+    # Window accessors
+    # ------------------------------------------------------------------
+
+    def _get_window(self, level: int, fb: int) -> torch.Tensor:
+        return getattr(self, f"window_{level}_{fb}")
+
+    # ------------------------------------------------------------------
+    # State management
+    # ------------------------------------------------------------------
+
+    def reset(self) -> None:
+        """Drop all state; the next forward re-allocates from the input."""
+        self._allocated_batch_shape = None
+        self._time_buffers = [None] * (self.n_spectrograms * self.n_filterbanks)
+        # Reset spectrogram buffers to empty placeholder.
+        for i in range(self.n_spectrograms - 1):
+            buf = self._get_spectrogram_buffer(i)
+            self._set_spectrogram_buffer(
+                i, torch.empty(0, device=buf.device, dtype=buf.dtype)
+            )
+        # Reset left_boundaries.
+        self.left_boundaries = torch.empty(
+            0,
+            device=self.left_boundaries.device,
+            dtype=self.left_boundaries.dtype,
+        )
+        # Reset all MovingMaxMinHorizontal instances.
+        for mmm in self.moving_max_min:
+            mmm.reset()
+
+    def _allocate(
+        self,
+        leading: tuple[int, ...],
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> None:
+        """Allocate all state tensors for a given flattened batch shape."""
+        B_flat = int(np.prod(leading)) if leading else 1
+
+        # Time buffers: shape (B_flat, frame_size) per (level, fb).
+        for iSG in range(self.n_spectrograms):
+            for fb in range(self.n_filterbanks):
+                idx = iSG * self.n_filterbanks + fb
+                self._time_buffers[idx] = torch.zeros(
+                    B_flat, self.frame_size, device=device, dtype=dtype
+                )
+
+        # spectrogram_buffer[i]: shape (B_flat, n_bands, n_cols_i), filled with 1e6.
+        for i in range(self.n_spectrograms - 1):
+            n_cols = self.spectrogram_buffer_cols[i]
+            self._set_spectrogram_buffer(
+                i,
+                torch.full(
+                    (B_flat, self.n_bands, n_cols), 1e6, device=device, dtype=dtype
+                ),
+            )
+
+        # left_boundaries: shape (B_flat, n_bands, n_spectrograms-1), filled with 1e6.
+        self.left_boundaries = torch.full(
+            (B_flat, self.n_bands, self.n_spectrograms - 1),
+            1e6,
+            device=device,
+            dtype=dtype,
+        )
+
+        self._allocated_batch_shape = leading
+
+    # ------------------------------------------------------------------
+    # FFT (overlap-save, single frame)
+    # ------------------------------------------------------------------
+
+    def _fft_frame(
+        self,
+        x_chunk: torch.Tensor,  # (B, chunk_size)
+        level: int,
+        fb: int,
+        detach_state: bool,
+    ) -> torch.Tensor:
+        """Slide ``x_chunk`` into the overlap-save buffer, apply window, rfft → power.
+
+        Returns ``|X|²`` of shape ``(B, n_bands)``.
+        """
+        idx = level * self.n_filterbanks + fb
+        time_buf = self._time_buffers[idx]  # (B, frame_size)
+        chunk_size = x_chunk.shape[-1]
+        overlap = self.frame_size - chunk_size
+
+        # overlap-save: shift old tail to head, write new input at tail.
+        new_buf = torch.empty_like(time_buf)
+        new_buf[:, :overlap] = time_buf[:, -overlap:]
+        new_buf[:, overlap:] = x_chunk
+
+        window = self._get_window(level, fb)  # (frame_size,)
+        fft_in = new_buf * window  # (B, frame_size)
+        # rfft returns complex tensor of shape (B, frame_size//2 + 1) = (B, n_bands)
+        spectrum = torch.fft.rfft(fft_in, n=self.frame_size, dim=-1)
+        power = spectrum.real ** 2 + spectrum.imag ** 2  # |X|²
+
+        new_state = new_buf.detach() if detach_state else new_buf
+        self._time_buffers[idx] = new_state
+
+        return power  # (B, n_bands)
+
+    # ------------------------------------------------------------------
+    # Forward
+    # ------------------------------------------------------------------
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        *,
+        detach_state: bool = True,
+    ) -> torch.Tensor:
+        """Process one buffer of audio.
+
+        Parameters
+        ----------
+        x:
+            Input tensor of shape ``(..., buffer_size)``.
+        detach_state:
+            If True (default), detach all state tensors from the autograd graph
+            after each forward, matching the C++ behaviour of non-differentiable
+            state.
+
+        Returns
+        -------
+        torch.Tensor
+            Shape ``(..., n_bands, 2^(n_spectrograms-1))`` in dB.
+        """
+        if x.shape[-1] != self.buffer_size:
+            raise ValueError(
+                f"Expected last dim {self.buffer_size}, got {x.shape[-1]}"
+            )
+
+        # Flatten leading dims.
+        leading = x.shape[:-1]
+        x_flat = x.reshape(-1, self.buffer_size)  # (B, buffer_size)
+        B = x_flat.shape[0]
+
+        # Lazy allocation / batch-shape check.
+        if self._allocated_batch_shape is None:
+            self._allocate(leading, x_flat.device, x_flat.dtype)
+        elif self._allocated_batch_shape != leading:
+            raise ValueError(
+                f"SpectrogramAdaptiveMoving: batch shape mismatch. "
+                f"Allocated for {self._allocated_batch_shape}, got {leading}. "
+                "Call reset() first to rebind."
+            )
+
+        # ----------------------------------------------------------------
+        # FFT cascade
+        # ----------------------------------------------------------------
+        # spectrograms[iSG]: (B, n_bands, 2^iSG) linear power spectrogram
+        spectrograms: list[torch.Tensor] = []
+        for iSG in range(self.n_spectrograms):
+            chunk_size = self.buffer_size >> iSG   # buffer_size / 2^iSG
+            n_subframes = 1 << iSG                 # 2^iSG
+
+            # Collect one power column per sub-frame.
+            cols: list[torch.Tensor] = []
+            for iSub in range(n_subframes):
+                start = iSub * chunk_size
+                chunk = x_flat[:, start : start + chunk_size]  # (B, chunk_size)
+
+                if self.n_filterbanks == 1:
+                    power = self._fft_frame(chunk, iSG, 0, detach_state)
+                else:
+                    # 3 filterbanks → element-wise minimum power.
+                    p0 = self._fft_frame(chunk, iSG, 0, detach_state)
+                    p1 = self._fft_frame(chunk, iSG, 1, detach_state)
+                    p2 = self._fft_frame(chunk, iSG, 2, detach_state)
+                    power = torch.minimum(torch.minimum(p0, p1), p2)
+
+                cols.append(power)  # (B, n_bands)
+
+            # Stack sub-frame columns → (B, n_bands, n_subframes)
+            spectrograms.append(torch.stack(cols, dim=-1))
+
+        # ----------------------------------------------------------------
+        # Build output (mirrors processAlgorithm lines 57-81)
+        # ----------------------------------------------------------------
+        n_output_frames = 1 << (self.n_spectrograms - 1)
+        output = torch.empty(
+            B, self.n_bands, n_output_frames,
+            device=x_flat.device, dtype=x_flat.dtype,
+        )
+
+        # Level 0: single column, convert to dB.
+        output[..., 0:1] = 10.0 * torch.log10(
+            spectrograms[0].clamp(min=1e-20)
+        )  # spectrograms[0] is (B, n_bands, 1)
+
+        for iFB in range(self.n_spectrograms - 1):
+            prev_cols = 1 << iFB          # 2^iFB
+            new_cols = 1 << (iFB + 1)     # 2^(iFB+1)
+            current_cols = self.spectrogram_buffer_cols[iFB]
+            shift_cols = current_cols - new_cols
+            assert shift_cols > 0, (
+                f"shift_cols={shift_cols} <= 0 at iFB={iFB}; "
+                f"current_cols={current_cols}, new_cols={new_cols}"
+            )
+
+            # Build input to upscale: [leftBoundary | output[0..prev_cols-1]]
+            # left_boundaries has shape (B, n_bands, n_spectrograms-1)
+            left_boundary = self.left_boundaries[..., iFB : iFB + 1]  # (B, n_bands, 1)
+            prev_block = output[..., :prev_cols]                        # (B, n_bands, prev_cols)
+            upscale_input = torch.cat([left_boundary, prev_block], dim=-1)
+            # shape: (B, n_bands, prev_cols + 1)
+
+            # Save next left boundary BEFORE upscale overwrites output.
+            # C++: leftBoundaries.col(iFB) = output.col(prevCols - 1)
+            new_left_boundary = output[..., prev_cols - 1 : prev_cols].clone()
+            # shape: (B, n_bands, 1)
+
+            # 2x horizontal upscale with leftBoundaryExcluded=true.
+            # upscale_input has prev_cols+1 columns (col 0 = boundary, cols 1..prev_cols = data).
+            # Output has 2*prev_cols = new_cols columns.
+            # Even output cols (0, 2, 4, ...) = midpoints of adjacent input cols.
+            # Odd output cols (1, 3, 5, ...) = input data cols (1..prev_cols).
+            even_cols = 0.5 * (upscale_input[..., :-1] + upscale_input[..., 1:])
+            # shape: (B, n_bands, prev_cols)
+            odd_cols = upscale_input[..., 1:]
+            # shape: (B, n_bands, prev_cols)
+            # Interleave: [even0, odd0, even1, odd1, ...] → shape (B, n_bands, new_cols)
+            upscaled = torch.stack([even_cols, odd_cols], dim=-1).reshape(
+                B, self.n_bands, new_cols
+            )
+            output[..., :new_cols] = upscaled
+
+            # Save the new left boundary back into state.
+            new_lb = new_left_boundary.detach() if detach_state else new_left_boundary
+            self.left_boundaries = torch.cat(
+                [
+                    self.left_boundaries[..., :iFB],
+                    new_lb,
+                    self.left_boundaries[..., iFB + 1 :],
+                ],
+                dim=-1,
+            )
+
+            # Per-level moving max-min on spectrograms[iFB+1] (linear power).
+            # C++: movingMaxMin[iFB].process(spectrograms[iFB+1], spectrograms[iFB+1])
+            moving_input = spectrograms[iFB + 1]  # (B, n_bands, new_cols)
+            moving_output = self.moving_max_min[iFB](
+                moving_input, detach_state=detach_state
+            )  # (B, n_bands, new_cols)
+            new_db = 10.0 * torch.log10(moving_output.clamp(min=1e-20))
+            # shape: (B, n_bands, new_cols)
+
+            # Shift-register update on spectrogram_buffer[iFB]:
+            # leftCols(shiftCols) = rightCols(shiftCols), then rightCols(newCols) = new_db
+            sb = self._get_spectrogram_buffer(iFB)  # (B, n_bands, current_cols)
+            new_sb = torch.cat([sb[..., -shift_cols:], new_db], dim=-1)
+            # shape: (B, n_bands, current_cols)  [shift_cols + new_cols = current_cols]
+            if detach_state:
+                new_sb = new_sb.detach()
+            self._set_spectrogram_buffer(iFB, new_sb)
+
+            # Combine: output[0..new_cols-1] = min(output[0..new_cols-1], buffer[0..new_cols-1])
+            output[..., :new_cols] = torch.minimum(
+                output[..., :new_cols], new_sb[..., :new_cols]
+            )
+
+        # Reshape back to leading dims.
+        return output.reshape(*leading, self.n_bands, n_output_frames)
