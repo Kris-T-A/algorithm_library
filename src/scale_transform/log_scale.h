@@ -63,7 +63,8 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
                                  : iMid; // last bin has no right half
             triangularWeights(i, iMid) = 0.0f; // full linear weight = 1.0 → 0 dB
             const float distLeft = static_cast<float>(iMid - iStart);
-            for (int iBin = iStart; iBin < iMid; ++iBin)
+            // Skip iBin = iStart: linWeight = 0 → log10(0) = -inf, identical to the default sentinel fill.
+            for (int iBin = iStart + 1; iBin < iMid; ++iBin)
             {
                 const float linWeight = 1.0f - (iMid - iBin) / distLeft;
                 triangularWeights(i, iBin) = 10.0f * std::log10(linWeight);
