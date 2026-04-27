@@ -94,3 +94,9 @@ def test_full_clip_self_consistency():
     out_full = torch.cat(out_full_chunks, dim=-1)
 
     torch.testing.assert_close(out_streaming, out_full)
+
+
+def test_forward_rejects_non_floating_dtype():
+    module = SpectrogramAdaptiveMoving(buffer_size=64, n_bands=129, n_spectrograms=3, n_folds=1, nonlinearity=0)
+    with pytest.raises(ValueError, match="floating dtype"):
+        module(torch.zeros(64, dtype=torch.long))

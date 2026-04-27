@@ -205,14 +205,24 @@ class SpectrogramAdaptiveMoving(nn.Module):
         # left_boundaries: (B*, n_bands, n_spectrograms-1) — placeholder.
         self.register_buffer("left_boundaries", torch.empty(0), persistent=False)
 
-        # Time buffers: per (level, fb) → stored as list of lists; lazy-allocated.
-        # Not registered as module buffers because they are 3D (need batch dim).
-        # We store them as a flat list indexed by level*n_filterbanks + fb.
-        self._time_buffers: list[torch.Tensor | None] = [
-            None
-        ] * (n_spectrograms * self.n_filterbanks)
+        # Time buffers: per (level, fb) — placeholder empty buffers; lazy-allocated.
+        for iSG in range(n_spectrograms):
+            for fb in range(self.n_filterbanks):
+                self.register_buffer(f"time_buffer_{iSG}_{fb}", torch.empty(0), persistent=False)
 
         self._allocated_batch_shape: tuple[int, ...] | None = None
+
+        # Validate shift_cols > 0 for all cascade levels at construction time.
+        for iFB in range(n_spectrograms - 1):
+            n_cols = self.spectrogram_buffer_cols[iFB]
+            new_cols = 1 << (iFB + 1)
+            shift_cols = n_cols - new_cols
+            if shift_cols <= 0:
+                raise ValueError(
+                    f"shift_cols={shift_cols} <= 0 at iFB={iFB}; "
+                    f"spectrogram_buffer_cols={n_cols}, new_cols={new_cols}. "
+                    "Check buffer_size, n_bands, and n_spectrograms."
+                )
 
     # ------------------------------------------------------------------
     # Helpers for buffer registration
@@ -223,6 +233,12 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
     def _set_spectrogram_buffer(self, i: int, value: torch.Tensor) -> None:
         setattr(self, f"spectrogram_buffer_{i}", value)
+
+    def _get_time_buffer(self, iSG: int, fb: int) -> torch.Tensor:
+        return getattr(self, f"time_buffer_{iSG}_{fb}")
+
+    def _set_time_buffer(self, iSG: int, fb: int, value: torch.Tensor) -> None:
+        setattr(self, f"time_buffer_{iSG}_{fb}", value)
 
     # ------------------------------------------------------------------
     # Window accessors
@@ -238,7 +254,11 @@ class SpectrogramAdaptiveMoving(nn.Module):
     def reset(self) -> None:
         """Drop all state; the next forward re-allocates from the input."""
         self._allocated_batch_shape = None
-        self._time_buffers = [None] * (self.n_spectrograms * self.n_filterbanks)
+        # Reset time buffers to empty placeholder.
+        for iSG in range(self.n_spectrograms):
+            for fb in range(self.n_filterbanks):
+                buf = self._get_time_buffer(iSG, fb)
+                self._set_time_buffer(iSG, fb, torch.empty(0, device=buf.device, dtype=buf.dtype))
         # Reset spectrogram buffers to empty placeholder.
         for i in range(self.n_spectrograms - 1):
             buf = self._get_spectrogram_buffer(i)
@@ -267,9 +287,9 @@ class SpectrogramAdaptiveMoving(nn.Module):
         # Time buffers: shape (B_flat, frame_size) per (level, fb).
         for iSG in range(self.n_spectrograms):
             for fb in range(self.n_filterbanks):
-                idx = iSG * self.n_filterbanks + fb
-                self._time_buffers[idx] = torch.zeros(
-                    B_flat, self.frame_size, device=device, dtype=dtype
+                self._set_time_buffer(
+                    iSG, fb,
+                    torch.zeros(B_flat, self.frame_size, device=device, dtype=dtype),
                 )
 
         # spectrogram_buffer[i]: shape (B_flat, n_bands, n_cols_i), filled with 1e6.
@@ -307,8 +327,7 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
         Returns ``|X|²`` of shape ``(B, n_bands)``.
         """
-        idx = level * self.n_filterbanks + fb
-        time_buf = self._time_buffers[idx]  # (B, frame_size)
+        time_buf = self._get_time_buffer(level, fb)  # (B, frame_size)
         chunk_size = x_chunk.shape[-1]
         overlap = self.frame_size - chunk_size
 
@@ -324,7 +343,7 @@ class SpectrogramAdaptiveMoving(nn.Module):
         power = spectrum.real ** 2 + spectrum.imag ** 2  # |X|²
 
         new_state = new_buf.detach() if detach_state else new_buf
-        self._time_buffers[idx] = new_state
+        self._set_time_buffer(level, fb, new_state)
 
         return power  # (B, n_bands)
 
@@ -354,6 +373,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
         torch.Tensor
             Shape ``(..., n_bands, 2^(n_spectrograms-1))`` in dB.
         """
+        if not x.is_floating_point():
+            raise ValueError(f"input must be a floating dtype, got {x.dtype}")
         if x.shape[-1] != self.buffer_size:
             raise ValueError(
                 f"Expected last dim {self.buffer_size}, got {x.shape[-1]}"
@@ -422,10 +443,6 @@ class SpectrogramAdaptiveMoving(nn.Module):
             new_cols = 1 << (iFB + 1)     # 2^(iFB+1)
             current_cols = self.spectrogram_buffer_cols[iFB]
             shift_cols = current_cols - new_cols
-            assert shift_cols > 0, (
-                f"shift_cols={shift_cols} <= 0 at iFB={iFB}; "
-                f"current_cols={current_cols}, new_cols={new_cols}"
-            )
 
             # Build input to upscale: [leftBoundary | output[0..prev_cols-1]]
             # left_boundaries has shape (B, n_bands, n_spectrograms-1)
