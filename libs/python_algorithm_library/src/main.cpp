@@ -18,6 +18,7 @@
 #include "algorithm_library/noise_reduction.h"
 #include "algorithm_library/normal3d.h"
 #include "algorithm_library/single_channel_path.h"
+#include "algorithm_library/scale_transform.h"
 #include "algorithm_library/solver_toeplitz.h"
 #include "algorithm_library/spectrogram.h"
 #include "algorithm_library/spline.h"
@@ -247,4 +248,5 @@ PYBIND11_MODULE(PythonAlgorithmLibrary, m)
     DEFINE_PYTHON_INTERFACE(NoiseReduction);
     DEFINE_PYTHON_INTERFACE(SpectrogramAdaptive);
     DEFINE_PYTHON_INTERFACE(PerceptualSpectralAnalysis);
+    DEFINE_PYTHON_INTERFACE(ScaleTransform);
 }
