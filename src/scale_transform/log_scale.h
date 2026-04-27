@@ -49,6 +49,35 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         nTriangularBins = c.nOutputs - nSum; // number of triangular bins
         fractionTriangular = centerBins.segment(nSum, nTriangularBins);
         distanceTriangular = centerBins.segment(nSum, nTriangularBins) - centerBins.segment(nSum - 1, nTriangularBins);
+
+        // Precompute triangular weights matrix (dB) — replaces the runtime energy2dB calls.
+        // Rows i ∈ [0, nTriangularBins), cols j ∈ [0, nInputs). Value = 10*log10(linear weight) for j inside the
+        // triangular window centered at fractionTriangular(i); -inf otherwise. The mid-bin is given full weight (0 dB).
+        triangularWeights = Eigen::ArrayXXf::Constant(nTriangularBins, c.nInputs, -std::numeric_limits<float>::infinity());
+        for (int i = 0; i < nTriangularBins; ++i)
+        {
+            const int iMid = static_cast<int>(std::ceil(fractionTriangular(i)));
+            const int iStart = static_cast<int>(std::ceil(fractionTriangular(i) - distanceTriangular(i)));
+            const int iEnd = (i < nTriangularBins - 1)
+                                 ? static_cast<int>(std::ceil(fractionTriangular(i) + distanceTriangular(i + 1)))
+                                 : iMid; // last bin has no right half
+            triangularWeights(i, iMid) = 0.0f; // full linear weight = 1.0 → 0 dB
+            const float distLeft = static_cast<float>(iMid - iStart);
+            for (int iBin = iStart; iBin < iMid; ++iBin)
+            {
+                const float linWeight = 1.0f - (iMid - iBin) / distLeft;
+                triangularWeights(i, iBin) = 10.0f * std::log10(linWeight);
+            }
+            if (iEnd > iMid)
+            {
+                const float distRight = static_cast<float>(iEnd - iMid);
+                for (int iBin = iMid + 1; iBin < iEnd; ++iBin)
+                {
+                    const float linWeight = 1.0f - (iBin - iMid) / distRight;
+                    triangularWeights(i, iBin) = 10.0f * std::log10(linWeight);
+                }
+            }
+        }
     }
 
     InterpolationCubic interpolationCubic;
@@ -101,35 +130,10 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
             // cubic interpolation
             interpolationCubic.process({input.col(channel), fractionCubic}, output.col(channel).segment(nLinearBins, nCubicBins));
 
-            // triangular interpolation
-            for (auto i = 0; i < nTriangularBins - 1; i++)
+            // triangular interpolation (precomputed weights)
+            for (int i = 0; i < nTriangularBins; ++i)
             {
-                auto iStart = static_cast<int>(std::ceil(fractionTriangular(i) - distanceTriangular(i)));
-                auto iMid = static_cast<int>(std::ceil(fractionTriangular(i)));
-                auto iEnd = static_cast<int>(std::ceil(fractionTriangular(i) + distanceTriangular(i + 1)));
-                auto dist = static_cast<float>(iMid - iStart);
-                output(i + nLinearBins + nCubicBins, channel) = input(iMid, channel); // initialize to iMid since it always has full weight
-                for (auto iBin = iStart; iBin < iMid; iBin++)
-                {
-                    float weightdB = energy2dB(1.f - (iMid - iBin) / dist);
-                    output(i + nLinearBins + nCubicBins, channel) = std::max(output(i + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
-                }
-                dist = static_cast<float>(iEnd - iMid);
-                for (auto iBin = iMid + 1; iBin < iEnd; iBin++)
-                {
-                    float weightdB = energy2dB(1.f - (iBin - iMid) / dist);
-                    output(i + nLinearBins + nCubicBins, channel) = std::max(output(i + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
-                }
-            }
-            auto iStart = static_cast<int>(std::ceil(fractionTriangular(nTriangularBins - 1) - distanceTriangular(nTriangularBins - 1)));
-            auto iMid = static_cast<int>(std::ceil(fractionTriangular(nTriangularBins - 1)));
-            auto dist = static_cast<float>(iMid - iStart);
-            output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) = input(iMid, channel); // initialize to iMid since it always has full weight
-            for (auto iBin = iStart; iBin < iMid; iBin++)
-            {
-                float weightdB = energy2dB(1.f - (iMid - iBin) / dist);
-                output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel) =
-                    std::max(output(nTriangularBins - 1 + nLinearBins + nCubicBins, channel), input(iBin, channel) + weightdB);
+                output(i + nLinearBins + nCubicBins, channel) = (input.col(channel) + triangularWeights.row(i).transpose()).maxCoeff();
             }
         }
     }
@@ -141,6 +145,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         size += fractionCubic.getDynamicMemorySize();
         size += fractionTriangular.getDynamicMemorySize();
         size += distanceTriangular.getDynamicMemorySize();
+        size += triangularWeights.getDynamicMemorySize();
         return size;
     }
 
@@ -151,6 +156,7 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
     Eigen::ArrayXf fractionCubic;
     Eigen::ArrayXf fractionTriangular;
     Eigen::ArrayXf distanceTriangular;
+    Eigen::ArrayXXf triangularWeights; // dense (nTriangularBins, nInputs); -inf outside each triangular window
 
     friend BaseAlgorithm;
 };
