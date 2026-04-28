@@ -45,8 +45,9 @@ class LogScale(nn.Module):
         ):
             n_linear_bins += 1
 
-        output_start_idx = center_bins[:n_linear_bins].astype(np.int32)
+        output_start_idx = center_bins[:n_linear_bins].astype(np.int64)
         fraction_linear = center_bins[:n_linear_bins] - output_start_idx.astype(np.float32)
+        linear_pair_idx = np.concatenate([output_start_idx, output_start_idx + 1]) if n_linear_bins > 0 else np.zeros(0, dtype=np.int64)
 
         # nCubicBins (mirrors C++ while-loop at log_scale.h:40-43).
         n_sum = n_linear_bins
@@ -72,7 +73,7 @@ class LogScale(nn.Module):
         self.n_triangular_bins = n_triangular_bins
 
         # Always register buffers (even zero-length) so device migration is consistent.
-        self.register_buffer("output_start_idx", torch.from_numpy(output_start_idx).long(), persistent=False)
+        self.register_buffer("linear_pair_idx", torch.from_numpy(linear_pair_idx), persistent=False)
         self.register_buffer("fraction_linear", torch.from_numpy(fraction_linear), persistent=False)
         self.register_buffer("fraction_cubic", torch.from_numpy(fraction_cubic), persistent=False)
         self.interpolation_cubic = InterpolationCubic()
@@ -112,10 +113,9 @@ class LogScale(nn.Module):
 
         # Linear region.
         if self.n_linear_bins > 0:
-            x0 = x.index_select(-1, self.output_start_idx)
-            x1 = x.index_select(-1, self.output_start_idx + 1)
-            f = self.fraction_linear
-            linear_out = (1.0 - f) * x0 + f * x1
+            pair = x.index_select(-1, self.linear_pair_idx).unflatten(-1, (2, self.n_linear_bins))
+            x0, x1 = pair.unbind(dim=-2)
+            linear_out = x0 + self.fraction_linear * (x1 - x0)
             out_chunks.append(linear_out)
 
         # Cubic region: delegate.
@@ -126,7 +126,7 @@ class LogScale(nn.Module):
         # Triangular region: max over (input + weights_dB) along input dim.
         if self.n_triangular_bins > 0:
             shifted = x.unsqueeze(-2) + self.triangular_weights  # (..., n_tri, n_inputs)
-            tri_out, _ = shifted.max(dim=-1)
+            tri_out = shifted.amax(dim=-1)
             out_chunks.append(tri_out)
 
         return torch.cat(out_chunks, dim=-1)
