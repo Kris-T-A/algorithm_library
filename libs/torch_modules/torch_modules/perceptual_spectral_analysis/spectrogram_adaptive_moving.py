@@ -313,39 +313,41 @@ class SpectrogramAdaptiveMoving(nn.Module):
         self._allocated_batch_shape = tuple(leading)
 
     # ------------------------------------------------------------------
-    # FFT (overlap-save, single frame)
+    # FFT (overlap-save, all sub-frames of one level batched)
     # ------------------------------------------------------------------
 
-    def _fft_frame(
+    def _fft_level(
         self,
-        x_chunk: torch.Tensor,  # (B, chunk_size)
+        x_flat: torch.Tensor,  # (B, buffer_size)
         level: int,
         fb: int,
         detach_state: bool,
     ) -> torch.Tensor:
-        """Slide ``x_chunk`` into the overlap-save buffer, apply window, rfft → power.
+        """All sub-frames of one (level, fb) in a single batched rfft.
 
-        Returns ``|X|²`` of shape ``(B, n_bands)``.
+        Each sub-frame's overlap-save buffer is a sliding window of size
+        ``frame_size``, stride ``chunk_size``, starting at offset ``chunk_size``
+        into ``concat([prev_time_buffer, x_flat])`` — so the per-chunk
+        sequential dependency collapses into one ``unfold`` view.
+
+        Returns ``|X|²`` of shape ``(B, n_bands, n_subframes)``.
         """
+        chunk_size = self.buffer_size >> level
         time_buf = self._get_time_buffer(level, fb)  # (B, frame_size)
-        chunk_size = x_chunk.shape[-1]
-        overlap = self.frame_size - chunk_size
 
-        # overlap-save: shift old tail to head, write new input at tail.
-        new_buf = torch.empty_like(time_buf)
-        new_buf[:, :overlap] = time_buf[:, -overlap:]
-        new_buf[:, overlap:] = x_chunk
+        concat = torch.cat([time_buf, x_flat], dim=-1)  # (B, frame_size + buffer_size)
+        windows = concat[:, chunk_size:].unfold(-1, self.frame_size, chunk_size)
+        # (B, n_subframes, frame_size) — view, no copy
 
-        window = self._get_window(level, fb)  # (frame_size,)
-        fft_in = new_buf * window  # (B, frame_size)
-        # rfft returns complex tensor of shape (B, frame_size//2 + 1) = (B, n_bands)
+        fft_in = windows * self._get_window(level, fb)
         spectrum = torch.fft.rfft(fft_in, n=self.frame_size, dim=-1)
-        power = spectrum.real ** 2 + spectrum.imag ** 2  # |X|²
+        power = spectrum.real ** 2 + spectrum.imag ** 2  # (B, n_subframes, n_bands)
 
-        new_state = new_buf.detach() if detach_state else new_buf
-        self._set_time_buffer(level, fb, new_state)
+        # contiguous() so the buffer doesn't keep `concat` (size frame_size + buffer_size) alive.
+        new_state = concat[:, -self.frame_size:].contiguous()
+        self._set_time_buffer(level, fb, new_state.detach() if detach_state else new_state)
 
-        return power  # (B, n_bands)
+        return power.transpose(-2, -1)  # (B, n_bands, n_subframes)
 
     # ------------------------------------------------------------------
     # Forward
@@ -401,28 +403,14 @@ class SpectrogramAdaptiveMoving(nn.Module):
         # spectrograms[iSG]: (B, n_bands, 2^iSG) linear power spectrogram
         spectrograms: list[torch.Tensor] = []
         for iSG in range(self.n_spectrograms):
-            chunk_size = self.buffer_size >> iSG   # buffer_size / 2^iSG
-            n_subframes = 1 << iSG                 # 2^iSG
-
-            # Collect one power column per sub-frame.
-            cols: list[torch.Tensor] = []
-            for iSub in range(n_subframes):
-                start = iSub * chunk_size
-                chunk = x_flat[:, start : start + chunk_size]  # (B, chunk_size)
-
-                if self.n_filterbanks == 1:
-                    power = self._fft_frame(chunk, iSG, 0, detach_state)
-                else:
-                    # 3 filterbanks → element-wise minimum power.
-                    p0 = self._fft_frame(chunk, iSG, 0, detach_state)
-                    p1 = self._fft_frame(chunk, iSG, 1, detach_state)
-                    p2 = self._fft_frame(chunk, iSG, 2, detach_state)
-                    power = torch.minimum(torch.minimum(p0, p1), p2)
-
-                cols.append(power)  # (B, n_bands)
-
-            # Stack sub-frame columns → (B, n_bands, n_subframes)
-            spectrograms.append(torch.stack(cols, dim=-1))
+            if self.n_filterbanks == 1:
+                power = self._fft_level(x_flat, iSG, 0, detach_state)
+            else:
+                p0 = self._fft_level(x_flat, iSG, 0, detach_state)
+                p1 = self._fft_level(x_flat, iSG, 1, detach_state)
+                p2 = self._fft_level(x_flat, iSG, 2, detach_state)
+                power = torch.minimum(torch.minimum(p0, p1), p2)
+            spectrograms.append(power)  # (B, n_bands, 2^iSG)
 
         # ----------------------------------------------------------------
         # Build output (mirrors processAlgorithm lines 57-81)
@@ -436,6 +424,11 @@ class SpectrogramAdaptiveMoving(nn.Module):
         current_block = 10.0 * torch.log10(
             spectrograms[0].clamp(min=1e-20)
         )  # (B, n_bands, 1)
+
+        # Collect new left boundaries; rebuild self.left_boundaries once at the end.
+        # Reads of self.left_boundaries[..., iFB:iFB+1] inside the loop only ever
+        # consume the previous-forward stash, never a freshly-written column.
+        new_lbs: list[torch.Tensor] = []
 
         for iFB in range(self.n_spectrograms - 1):
             prev_cols = 1 << iFB          # 2^iFB
@@ -452,8 +445,7 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
             # Save next left boundary (last column of current_block) before upscaling.
             # C++: leftBoundaries.col(iFB) = output.col(prevCols - 1)
-            new_left_boundary = current_block[..., prev_cols - 1 : prev_cols]
-            # shape: (B, n_bands, 1)
+            new_lbs.append(current_block[..., prev_cols - 1 : prev_cols])
 
             # 2x horizontal upscale with leftBoundaryExcluded=true.
             # upscale_input has prev_cols+1 columns (col 0 = boundary, cols 1..prev_cols = data).
@@ -465,21 +457,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
             odd_cols = upscale_input[..., 1:]
             # shape: (B, n_bands, prev_cols)
             # Interleave: [even0, odd0, even1, odd1, ...] → shape (B, n_bands, new_cols)
-            upscaled = torch.stack([even_cols, odd_cols], dim=-1).reshape(
+            current_block = torch.stack([even_cols, odd_cols], dim=-1).reshape(
                 B, self.n_bands, new_cols
-            )
-            # upscaled is now the upscaled version; update current_block for next iteration.
-            current_block = upscaled
-
-            # Save the new left boundary back into state.
-            new_lb = new_left_boundary.detach() if detach_state else new_left_boundary
-            self.left_boundaries = torch.cat(
-                [
-                    self.left_boundaries[..., :iFB],
-                    new_lb,
-                    self.left_boundaries[..., iFB + 1 :],
-                ],
-                dim=-1,
             )
 
             # Per-level moving max-min on spectrograms[iFB+1] (linear power).
@@ -502,6 +481,12 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
             # Combine: current_block = min(upscaled, buffer[0..new_cols-1])
             current_block = torch.minimum(current_block, new_sb[..., :new_cols])
+
+        if new_lbs:
+            new_lb_tensor = torch.cat(new_lbs, dim=-1)
+            self.left_boundaries = (
+                new_lb_tensor.detach() if detach_state else new_lb_tensor
+            )
 
         # Reshape back to leading dims.
         return current_block.reshape(*leading, self.n_bands, 1 << (self.n_spectrograms - 1))
