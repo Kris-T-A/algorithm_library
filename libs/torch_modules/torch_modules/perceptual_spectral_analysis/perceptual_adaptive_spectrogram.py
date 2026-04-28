@@ -82,7 +82,11 @@ class PerceptualAdaptiveSpectrogramStreaming(nn.Module):
             tilt = np.nan_to_num(tilt, neginf=0.0)
         else:
             tilt = np.zeros(n_bands_internal, dtype=np.float32)
-        self.register_buffer("spectral_tilt_vector", torch.from_numpy(tilt), persistent=False)
+        self.register_buffer(
+            "spectral_tilt_vector",
+            torch.from_numpy(tilt).unsqueeze(-1),
+            persistent=False,
+        )
 
     def reset(self) -> None:
         """Reset all stateful sub-modules (FFT cascade buffers, per-level history, moving filters)."""
@@ -98,7 +102,7 @@ class PerceptualAdaptiveSpectrogramStreaming(nn.Module):
             )
 
         spectrogram_db = self.spectrogram(x, detach_state=detach_state)  # (..., n_bands_internal, frames)
-        spectrogram_db = spectrogram_db + self.spectral_tilt_vector.unsqueeze(-1)
+        spectrogram_db = spectrogram_db + self.spectral_tilt_vector
         # log_scale wants (..., n_inputs); transpose (n_inputs, frames) -> (frames, n_inputs), then back.
         log_scaled = self.log_scale(spectrogram_db.transpose(-1, -2)).transpose(-1, -2)
         return self.moving_max_min(log_scaled)
