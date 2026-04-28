@@ -35,18 +35,13 @@ class MovingMaxMinVertical(nn.Module):
             # See src/moving_max_min/moving_max_min_vertical.h:48-83. Match for C++ parity.
             return torch.cat([x[..., 1:, :], x[..., -1:, :]], dim=-2)
 
-        # F.max_pool1d operates on the last dim, so transpose, flatten leading dims,
-        # pool, then unflatten and transpose back.
-        x_t = x.transpose(-1, -2)  # (..., n_cols, n_channels)
-        leading = x_t.shape[:-1]
-        x_flat = x_t.reshape(-1, x_t.shape[-1]).unsqueeze(1)  # (B*, 1, n_channels)
-
-        padded = F.pad(x_flat, (L - 1, L - 1), mode="replicate")
-        max_out = F.max_pool1d(padded, kernel_size=L, stride=1)
-        min_out = -F.max_pool1d(-max_out, kernel_size=L, stride=1)
-
-        out = min_out.squeeze(1).reshape(*leading, -1).transpose(-1, -2)
-        return out
+        leading = x.shape[:-2]
+        H, W = x.shape[-2], x.shape[-1]
+        x4 = x.reshape(-1, 1, H, W)
+        padded = F.pad(x4, (0, 0, L - 1, L - 1), mode="replicate")
+        max_out = F.max_pool2d(padded, kernel_size=(L, 1), stride=1)
+        min_out = -F.max_pool2d(-max_out, kernel_size=(L, 1), stride=1)
+        return min_out.reshape(*leading, H, W)
 
 
 class MovingMaxMinHorizontal(nn.Module):
@@ -117,8 +112,10 @@ class MovingMaxMinHorizontal(nn.Module):
         out = out.reshape(*batch_shape, self.n_channels, -1)
 
         # Update state: trailing L-1 columns of each concatenated stream.
-        new_prev_input = max_input[..., -(L - 1):]
-        new_prev_max_out = min_input[..., -(L - 1):]
+        # contiguous() forces a copy so the buffers don't keep the full
+        # (L-1+T)-wide max_input / min_input storage alive between forwards.
+        new_prev_input = max_input[..., -(L - 1):].contiguous()
+        new_prev_max_out = min_input[..., -(L - 1):].contiguous()
         if detach_state:
             new_prev_input = new_prev_input.detach()
             new_prev_max_out = new_prev_max_out.detach()
