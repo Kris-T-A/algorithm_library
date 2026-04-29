@@ -142,16 +142,4 @@ class PerceptualAdaptiveSpectrogram(nn.Module):
         self.streaming = PerceptualAdaptiveSpectrogramStreaming(**kwargs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        buffer_size = self.streaming.buffer_size
-        T = x.shape[-1]
-        if T <= 0 or T % buffer_size != 0:
-            raise ValueError(
-                f"input last dim must be a positive multiple of bufferSize={buffer_size}, got {T}"
-            )
-
-        self.streaming.reset()
-        chunks = []
-        for i in range(T // buffer_size):
-            chunk = x[..., i * buffer_size:(i + 1) * buffer_size]
-            chunks.append(self.streaming(chunk, detach_state=False))
-        return torch.cat(chunks, dim=-1)
+        return self.streaming.forward_fullclip(x)
