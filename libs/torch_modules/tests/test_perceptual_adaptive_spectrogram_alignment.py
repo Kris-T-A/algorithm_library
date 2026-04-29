@@ -127,6 +127,38 @@ def test_stateless_equals_streaming_chunked():
     torch.testing.assert_close(out_stateless, out_streaming, atol=1e-6, rtol=1e-6)
 
 
+def test_streaming_forward_fullclip_matches_per_chunk_loop():
+    """PerceptualAdaptiveSpectrogramStreaming.forward_fullclip equals chunk-by-chunk forward."""
+    cfg = dict(
+        buffer_size=256, n_bands=64, n_spectrograms=3, n_folds=1, nonlinearity=1,
+        sample_rate=48000.0, frequency_min=20.0, frequency_max=20000.0,
+        spectral_tilt=True,
+    )
+
+    for n_chunks in (1, 2, 5):
+        module = PerceptualAdaptiveSpectrogramStreaming(**cfg)
+
+        rng = np.random.default_rng(n_chunks)
+        x_full = torch.from_numpy(
+            rng.standard_normal((2, n_chunks * cfg["buffer_size"])).astype(np.float32)
+        )
+
+        module.reset()
+        streaming_chunks = []
+        for k in range(n_chunks):
+            c = x_full[..., k * cfg["buffer_size"] : (k + 1) * cfg["buffer_size"]]
+            streaming_chunks.append(module(c, detach_state=False))
+        streaming_full = torch.cat(streaming_chunks, dim=-1)
+
+        module.reset()
+        fullclip = module.forward_fullclip(x_full)
+
+        torch.testing.assert_close(
+            fullclip, streaming_full, atol=1e-5, rtol=1e-5,
+            msg=f"n_chunks={n_chunks}",
+        )
+
+
 def test_stateless_rejects_partial_chunks():
     cfg = dict(
         buffer_size=256, n_bands=64, n_spectrograms=3, n_folds=1, nonlinearity=0,

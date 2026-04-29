@@ -107,6 +107,25 @@ class PerceptualAdaptiveSpectrogramStreaming(nn.Module):
         log_scaled = self.log_scale(spectrogram_db.transpose(-1, -2)).transpose(-1, -2)
         return self.moving_max_min(log_scaled)
 
+    def forward_fullclip(self, x: torch.Tensor) -> torch.Tensor:
+        """Process an entire clip ``(..., T)`` in one shot. Stateless.
+
+        ``T`` must be a positive multiple of ``buffer_size``. Returns
+        ``(..., n_bands, T // buffer_size * 2^(n_spectrograms-1))`` in dB.
+        """
+        if not x.is_floating_point():
+            raise ValueError(f"input must be a floating dtype, got {x.dtype}")
+        T = x.shape[-1]
+        if T <= 0 or T % self.buffer_size != 0:
+            raise ValueError(
+                f"input last dim must be a positive multiple of bufferSize={self.buffer_size}, got {T}"
+            )
+
+        spectrogram_db = self.spectrogram.forward_fullclip(x)
+        spectrogram_db = spectrogram_db + self.spectral_tilt_vector
+        log_scaled = self.log_scale(spectrogram_db.transpose(-1, -2)).transpose(-1, -2)
+        return self.moving_max_min(log_scaled)
+
 
 class PerceptualAdaptiveSpectrogram(nn.Module):
     """Stateless wrapper around ``PerceptualAdaptiveSpectrogramStreaming``.
