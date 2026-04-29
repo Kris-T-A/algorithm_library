@@ -52,6 +52,29 @@ def test_benchmark_stateless(benchmark, cfg, batch, device):
     benchmark(run)
 
 
+LONG_CLIP_MULTIPLIERS = [4, 64]
+
+
+@pytest.mark.parametrize("cfg", CONFIGS, ids=lambda c: f"nBands={c['n_bands']}")
+@pytest.mark.parametrize("batch", BATCHES)
+@pytest.mark.parametrize("device", DEVICES)
+@pytest.mark.parametrize("mult", LONG_CLIP_MULTIPLIERS, ids=lambda m: f"T={m}xBuf")
+def test_benchmark_stateless_clip_length(benchmark, cfg, batch, device, mult):
+    module = PerceptualAdaptiveSpectrogram(**cfg).to(device)
+    x = torch.randn(batch, mult * cfg["buffer_size"], device=device)
+    module(x)  # warmup
+    if device == "cuda":
+        torch.cuda.synchronize()
+
+    def run():
+        out = module(x)
+        if device == "cuda":
+            torch.cuda.synchronize()
+        return out
+
+    benchmark(run)
+
+
 if __name__ == "__main__":
     print(f"{'config':<40} {'batch':>6} {'device':>6} {'ms/call':>10}")
     for cfg in CONFIGS:
