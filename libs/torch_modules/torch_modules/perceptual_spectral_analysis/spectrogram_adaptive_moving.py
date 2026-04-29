@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from torch_modules.perceptual_spectral_analysis.moving_max_min import (
     MovingMaxMinHorizontal,
+    MovingMaxMinTime,
 )
 
 
@@ -185,6 +187,12 @@ class SpectrogramAdaptiveMoving(nn.Module):
                 for iFB in range(n_spectrograms - 1)
             ]
         )
+        self.moving_max_min_time = nn.ModuleList(
+            [
+                MovingMaxMinTime(filter_length=1 << (iFB + 1))
+                for iFB in range(n_spectrograms - 1)
+            ]
+        )
 
         # Pre-compute spectrogram_buffer column counts for each level 1..n_spectrograms-1.
         # C++: nCols = 1 + (delayRef - delay) / bufferSize_i
@@ -349,6 +357,34 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
         return power.transpose(-2, -1)  # (B, n_bands, n_subframes)
 
+    def _fft_level_fullclip(
+        self,
+        x_full: torch.Tensor,  # (B, T)
+        level: int,
+        fb: int,
+    ) -> torch.Tensor:
+        """All sub-frames of one (level, fb) for the whole clip in one rfft.
+
+        Equivalent to running the streaming overlap-save with ``time_buffer``
+        initialised to zeros and ``x_full = cat(all_chunks)``: prepend
+        ``frame_size`` zeros, then take sliding windows of size ``frame_size``,
+        stride ``chunk_size``, starting at offset ``chunk_size``.
+
+        Returns ``|X|²`` of shape ``(B, n_bands, n_subframes_total)``.
+        """
+        chunk_size = self.buffer_size >> level
+        zeros = torch.zeros(
+            *x_full.shape[:-1], self.frame_size, device=x_full.device, dtype=x_full.dtype
+        )
+        extended = torch.cat([zeros, x_full], dim=-1)
+        windows = extended[..., chunk_size:].unfold(-1, self.frame_size, chunk_size)
+        # (B, n_subframes_total, frame_size)
+
+        fft_in = windows * self._get_window(level, fb)
+        spectrum = torch.fft.rfft(fft_in, n=self.frame_size, dim=-1)
+        power = spectrum.real ** 2 + spectrum.imag ** 2
+        return power.transpose(-2, -1)  # (B, n_bands, n_subframes_total)
+
     # ------------------------------------------------------------------
     # Forward
     # ------------------------------------------------------------------
@@ -490,3 +526,87 @@ class SpectrogramAdaptiveMoving(nn.Module):
 
         # Reshape back to leading dims.
         return current_block.reshape(*leading, self.n_bands, 1 << (self.n_spectrograms - 1))
+
+    def forward_fullclip(self, x: torch.Tensor) -> torch.Tensor:
+        """Process an entire clip ``x`` of shape ``(..., T)`` where ``T`` is a
+        positive multiple of ``buffer_size``. Stateless — does not touch any
+        of the streaming state buffers.
+
+        Returns ``(..., n_bands, T // buffer_size * 2^(n_spectrograms-1))`` in dB.
+        """
+        if not x.is_floating_point():
+            raise ValueError(f"input must be a floating dtype, got {x.dtype}")
+        T = x.shape[-1]
+        if T <= 0 or T % self.buffer_size != 0:
+            raise ValueError(
+                f"input last dim must be a positive multiple of bufferSize={self.buffer_size}, got {T}"
+            )
+
+        leading = x.shape[:-1]
+        x_flat = x.reshape(-1, T)
+        B = x_flat.shape[0]
+        N = T // self.buffer_size
+
+        # FFT cascade — one batched rfft per (level, fb) over the full clip.
+        spectrograms: list[torch.Tensor] = []
+        for iSG in range(self.n_spectrograms):
+            if self.n_filterbanks == 1:
+                power = self._fft_level_fullclip(x_flat, iSG, 0)
+            else:
+                p0 = self._fft_level_fullclip(x_flat, iSG, 0)
+                p1 = self._fft_level_fullclip(x_flat, iSG, 1)
+                p2 = self._fft_level_fullclip(x_flat, iSG, 2)
+                power = torch.minimum(torch.minimum(p0, p1), p2)
+            spectrograms.append(power)  # (B, n_bands, N * 2^iSG)
+
+        # Cascade combine.
+        current_block = 10.0 * torch.log10(spectrograms[0].clamp(min=1e-20))
+        # current_block shape: (B, n_bands, N * 1)
+
+        for iFB in range(self.n_spectrograms - 1):
+            prev_cols = 1 << iFB
+            new_cols = 1 << (iFB + 1)
+            shift_cols = self.spectrogram_buffer_cols[iFB] - new_cols
+
+            # Per-chunk left boundary: last col of previous chunk's current_block
+            # (sentinel 1e6 for chunk 0).
+            last_cols = current_block[..., prev_cols - 1 :: prev_cols]  # (B, n_bands, N)
+            boundaries = torch.cat(
+                [
+                    torch.full(
+                        (B, self.n_bands, 1),
+                        1e6,
+                        device=x.device,
+                        dtype=current_block.dtype,
+                    ),
+                    last_cols[..., : N - 1],
+                ],
+                dim=-1,
+            )  # (B, n_bands, N)
+
+            # Upscale per chunk, vectorized.
+            per_chunk = current_block.reshape(B, self.n_bands, N, prev_cols)
+            upscale_input = torch.cat(
+                [boundaries.unsqueeze(-1), per_chunk], dim=-1
+            )  # (B, n_bands, N, prev_cols + 1)
+            even_cols = 0.5 * (upscale_input[..., :-1] + upscale_input[..., 1:])
+            odd_cols = upscale_input[..., 1:]
+            upscaled = torch.stack([even_cols, odd_cols], dim=-1).reshape(
+                B, self.n_bands, N * new_cols
+            )
+
+            # Per-level moving max-min over the full time axis.
+            moving_input = spectrograms[iFB + 1]  # (B, n_bands, N * new_cols)
+            moving_output = self.moving_max_min_time[iFB](moving_input)
+            new_db_full = 10.0 * torch.log10(moving_output.clamp(min=1e-20))
+
+            # Apply the streaming shift-register's shift_cols-frame delay by
+            # left-padding with the 1e6 sentinel and re-cropping.
+            new_db_padded = F.pad(new_db_full, (shift_cols, 0), value=1e6)
+            new_db_aligned = new_db_padded[..., : N * new_cols]
+
+            current_block = torch.minimum(upscaled, new_db_aligned)
+
+        return current_block.reshape(
+            *leading, self.n_bands, N * (1 << (self.n_spectrograms - 1))
+        )

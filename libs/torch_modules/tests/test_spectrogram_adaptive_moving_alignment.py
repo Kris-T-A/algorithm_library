@@ -100,3 +100,41 @@ def test_forward_rejects_non_floating_dtype():
     module = SpectrogramAdaptiveMoving(buffer_size=64, n_bands=129, n_spectrograms=3, n_folds=1, nonlinearity=0)
     with pytest.raises(ValueError, match="floating dtype"):
         module(torch.zeros(64, dtype=torch.long))
+
+
+def test_forward_fullclip_matches_streaming_loop():
+    """forward_fullclip(x) equals streaming forward applied chunk-by-chunk."""
+    buffer_size = 256
+    n_bands = 513  # frame_size = 1024 — must satisfy shift_cols > 0 at every level
+    n_spectrograms = 3
+
+    for n_chunks in (1, 2, 4, 7):
+        for nonlinearity in (0, 1):
+            for batch in ((), (3,), (2, 3)):
+                module = SpectrogramAdaptiveMoving(
+                    buffer_size=buffer_size,
+                    n_bands=n_bands,
+                    n_spectrograms=n_spectrograms,
+                    n_folds=1,
+                    nonlinearity=nonlinearity,
+                )
+
+                rng = np.random.default_rng(hash((n_chunks, nonlinearity, batch)) & 0xFFFFFFFF)
+                x_full = torch.from_numpy(
+                    rng.standard_normal((*batch, n_chunks * buffer_size)).astype(np.float32)
+                )
+
+                module.reset()
+                streaming_chunks = []
+                for k in range(n_chunks):
+                    c = x_full[..., k * buffer_size : (k + 1) * buffer_size]
+                    streaming_chunks.append(module(c, detach_state=False))
+                streaming_full = torch.cat(streaming_chunks, dim=-1)
+
+                module.reset()
+                fullclip = module.forward_fullclip(x_full)
+
+                torch.testing.assert_close(
+                    fullclip, streaming_full, atol=1e-5, rtol=1e-5,
+                    msg=f"n_chunks={n_chunks} nonlinearity={nonlinearity} batch={batch}",
+                )
