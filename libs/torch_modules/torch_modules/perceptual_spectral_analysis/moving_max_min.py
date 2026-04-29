@@ -123,3 +123,32 @@ class MovingMaxMinHorizontal(nn.Module):
         self.prev_max_out = new_prev_max_out
 
         return out
+
+
+class MovingMaxMinTime(nn.Module):
+    """Stateless causal moving max-min cascade along the last axis.
+
+    Forward expects ``(..., T)`` and returns the same shape. Equivalent to
+    feeding ``MovingMaxMinHorizontal`` chunk-by-chunk over the full clip:
+    max-pool(L) with ``-inf`` left-pad, then min-pool(L) with ``+inf`` left-pad.
+    Right edge is causal (no right pad).
+    """
+
+    def __init__(self, filter_length: int):
+        super().__init__()
+        assert filter_length > 0
+        self.filter_length = filter_length
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        L = self.filter_length
+        if L == 1:
+            return x
+
+        leading = x.shape[:-1]
+        T = x.shape[-1]
+        flat = x.reshape(-1, 1, T)
+        max_padded = F.pad(flat, (L - 1, 0), mode="constant", value=float("-inf"))
+        max_out = F.max_pool1d(max_padded, kernel_size=L, stride=1)
+        min_padded = F.pad(-max_out, (L - 1, 0), mode="constant", value=float("-inf"))
+        min_out = -F.max_pool1d(min_padded, kernel_size=L, stride=1)
+        return min_out.reshape(*leading, T)

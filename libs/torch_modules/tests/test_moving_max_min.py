@@ -4,6 +4,7 @@ import torch
 
 from torch_modules.perceptual_spectral_analysis.moving_max_min import (
     MovingMaxMinHorizontal,
+    MovingMaxMinTime,
     MovingMaxMinVertical,
 )
 
@@ -79,6 +80,37 @@ def test_horizontal_chunked_equals_full(L):
     full = module(torch.from_numpy(x)).numpy()
 
     np.testing.assert_allclose(chunked, full, atol=0)
+
+
+def test_moving_max_min_time_matches_horizontal_loop():
+    """Full-clip MovingMaxMinTime equals MovingMaxMinHorizontal applied chunk-by-chunk."""
+    L = 5
+    n_channels = 16
+    chunk = 8
+    n_chunks = 7
+
+    rng = np.random.default_rng(0)
+    x_full = torch.from_numpy(
+        rng.standard_normal((2, n_channels, n_chunks * chunk)).astype(np.float32)
+    )
+
+    horiz = MovingMaxMinHorizontal(filter_length=L, n_channels=n_channels)
+    streaming_out = []
+    for k in range(n_chunks):
+        c = x_full[..., k * chunk : (k + 1) * chunk]
+        streaming_out.append(horiz(c))
+    streaming_full = torch.cat(streaming_out, dim=-1)
+
+    time_module = MovingMaxMinTime(filter_length=L)
+    fullclip = time_module(x_full)
+
+    torch.testing.assert_close(fullclip, streaming_full)
+
+
+def test_moving_max_min_time_filter_length_one():
+    x = torch.randn(2, 4, 16)
+    out = MovingMaxMinTime(filter_length=1)(x)
+    torch.testing.assert_close(out, x)
 
 
 @pytest.mark.parametrize("L", [1, 2, 3, 4, 8])
