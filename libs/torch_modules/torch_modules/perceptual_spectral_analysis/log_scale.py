@@ -124,9 +124,45 @@ class LogScale(nn.Module):
             out_chunks.append(cubic_out)
 
         # Triangular region: max over (input + weights_dB) along input dim.
+        # The naive `shifted = x.unsqueeze(-2) + triangular_weights` materializes a
+        # (..., n_tri, n_inputs) tensor — for spectrogram-shaped inputs at training
+        # batch sizes that's multi-GB. Chunk along the flattened leading dims so the
+        # intermediate tensor stays bounded; amax(dim=-1) is per-row so chunking is
+        # numerically identical to the unchunked path.
         if self.n_triangular_bins > 0:
-            shifted = x.unsqueeze(-2) + self.triangular_weights  # (..., n_tri, n_inputs)
-            tri_out = shifted.amax(dim=-1)
-            out_chunks.append(tri_out)
+            out_chunks.append(self._triangular_amax(x))
 
         return torch.cat(out_chunks, dim=-1)
+
+    # Target ceiling for the intermediate `shifted` tensor, in bytes. 128 MB is small
+    # enough to fit comfortably inside any modern training budget, large enough that
+    # loop overhead is negligible relative to the matmul-equivalent broadcast.
+    _TRI_CHUNK_BYTES: int = 128 * 1024 * 1024
+
+    def _triangular_amax(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute `(x.unsqueeze(-2) + triangular_weights).max(dim=-1)[0]` chunked
+        along the flattened leading dims so the intermediate stays bounded.
+
+        Uses `.max(dim=-1)[0]` rather than `.amax(dim=-1)` because PyTorch's amax
+        backward saves the full pre-reduction tensor (~6 GB at training shapes),
+        while max(dim) backward saves only the argmax indices and scatters via
+        `value_selecting_reduction_backward`. Numerical result is identical.
+        """
+        leading = x.shape[:-1]
+        n_inputs = x.shape[-1]
+        flat = x.reshape(-1, n_inputs)  # (N, n_inputs)
+        N = flat.shape[0]
+        n_tri = self.triangular_weights.shape[0]
+        bytes_per_row = n_tri * n_inputs * x.element_size()
+        chunk = max(1, self._TRI_CHUNK_BYTES // max(1, bytes_per_row))
+        if chunk >= N:
+            shifted = flat.unsqueeze(-2) + self.triangular_weights
+            out_flat = shifted.max(dim=-1)[0]
+        else:
+            outs = []
+            for i in range(0, N, chunk):
+                sub = flat[i:i + chunk]
+                shifted = sub.unsqueeze(-2) + self.triangular_weights
+                outs.append(shifted.max(dim=-1)[0])
+            out_flat = torch.cat(outs, dim=0)
+        return out_flat.reshape(*leading, n_tri)
