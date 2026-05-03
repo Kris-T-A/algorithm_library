@@ -11,12 +11,17 @@ from torch_modules.interpolation.interpolation_cubic import InterpolationCubic
 
 
 def _energy_to_db(x: np.ndarray) -> np.ndarray:
-    """10 * log10(x) for x ∈ (0, 1] — used to convert linear triangular-window weights to dB.
+    """10 * log10(x + 1e-16) for x in [0, 1].
 
-    Mirrors `10 * std::log10` used in `src/scale_transform/log_scale.h`'s constructor.
-    Both implementations precompute these weights at construction time, so exact log10 is fine.
+    Mirrors `10 * std::log10(linWeight + 1e-16f)` used in
+    `src/scale_transform/log_scale.h`'s constructor.
     """
-    return (10.0 * np.log10(x)).astype(np.float32)
+    return (10.0 * np.log10(x + np.float32(1e-16))).astype(np.float32)
+
+
+def _cpp_round_positive(x: float) -> int:
+    """Match `std::round` for the non-negative center-bin values used here."""
+    return int(math.floor(x + 0.5))
 
 
 class LogScale(nn.Module):
@@ -61,10 +66,6 @@ class LogScale(nn.Module):
 
         n_triangular_bins = n_outputs - n_sum
         fraction_triangular = center_bins[n_sum:n_sum + n_triangular_bins].copy()
-        distance_triangular = (
-            center_bins[n_sum:n_sum + n_triangular_bins]
-            - center_bins[n_sum - 1:n_sum - 1 + n_triangular_bins]
-        ).copy() if n_triangular_bins > 0 else np.zeros(0, dtype=np.float32)
 
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -78,34 +79,48 @@ class LogScale(nn.Module):
         self.register_buffer("fraction_cubic", torch.from_numpy(fraction_cubic), persistent=False)
         self.interpolation_cubic = InterpolationCubic()
 
-        # Build the dense triangular weight matrix in dB (precomputed at construction; exact log10).
-        # weights shape: (n_triangular_bins, n_inputs); -inf outside the triangular window.
-        weights = np.full((max(n_triangular_bins, 1), n_inputs), -np.inf, dtype=np.float32)
-        # The "max(.., 1)" keeps the buffer non-empty for register_buffer; we mask below.
+        triangular_starts = []
+        triangular_weight_rows = []
         for i in range(n_triangular_bins):
-            i_mid = int(math.ceil(fraction_triangular[i]))
-            i_start = int(math.ceil(fraction_triangular[i] - distance_triangular[i]))
+            c_start = float(center_bins[n_sum + i - 1])
+            c_mid = float(center_bins[n_sum + i])
             if i < n_triangular_bins - 1:
-                i_end = int(math.ceil(fraction_triangular[i] + distance_triangular[i + 1]))
+                c_end = float(center_bins[n_sum + i + 1])
             else:
-                i_end = i_mid  # last bin has no right half (mirrors C++ at log_scale.h:124-133)
+                c_end = float(_cpp_round_positive(c_mid) + 1)
 
-            weights[i, i_mid] = 0.0  # full weight (linear 1.0 → 0 dB)
-            dist_left = float(i_mid - i_start)
-            # Skip i_bin = i_start: lin_weight = 0 → log10(0) = -inf, identical to the default sentinel fill.
-            for i_bin in range(i_start + 1, i_mid):
-                lin_weight = 1.0 - (i_mid - i_bin) / dist_left
-                weights[i, i_bin] = float(_energy_to_db(np.array([lin_weight]))[0])
-            if i_end > i_mid:
-                dist_right = float(i_end - i_mid)
-                for i_bin in range(i_mid + 1, i_end):
-                    lin_weight = np.float32(1.0 - (i_bin - i_mid) / dist_right)
-                    weights[i, i_bin] = _energy_to_db(np.array([lin_weight]))[0]
+            i_start = int(math.ceil(c_start))
+            i_mid = _cpp_round_positive(c_mid)
+            i_end = int(math.ceil(c_end))
 
-        # Register a real-shape buffer (drop the dummy first row if no triangular bins).
+            triangular_starts.append(i_start)
+            row = np.empty(i_end - i_start, dtype=np.float32)
+            for i_bin in range(i_start, i_mid):
+                lin_weight = np.float32(1.0 - (c_mid - i_bin) / (c_mid - c_start))
+                row[i_bin - i_start] = float(_energy_to_db(np.array([lin_weight]))[0])
+            row[i_mid - i_start] = 0.0  # full linear weight = 1.0 -> 0 dB
+            for i_bin in range(i_mid + 1, i_end):
+                lin_weight = np.float32(1.0 - (i_bin - c_mid) / (c_end - c_mid))
+                row[i_bin - i_start] = _energy_to_db(np.array([lin_weight]))[0]
+            triangular_weight_rows.append(row)
+
+        # Store the same per-window ranges as C++, padded only to the widest window so
+        # PyTorch can gather/reduce them as one tensor.
         if n_triangular_bins == 0:
-            weights = np.zeros((0, n_inputs), dtype=np.float32)
-        self.register_buffer("triangular_weights", torch.from_numpy(weights[:n_triangular_bins]), persistent=False)
+            triangular_idx = np.zeros((0, 0), dtype=np.int64)
+            weights = np.zeros((0, 0), dtype=np.float32)
+        else:
+            max_width = max(row.shape[0] for row in triangular_weight_rows)
+            starts = np.asarray(triangular_starts, dtype=np.int64)
+            offsets = np.arange(max_width, dtype=np.int64)[None, :]
+            lengths = np.asarray([row.shape[0] for row in triangular_weight_rows], dtype=np.int64)[:, None]
+            triangular_idx = starts[:, None] + offsets
+            triangular_idx = np.where(offsets < lengths, triangular_idx, 0)
+            weights = np.full((n_triangular_bins, max_width), -np.inf, dtype=np.float32)
+            for i, row in enumerate(triangular_weight_rows):
+                weights[i, :row.shape[0]] = row
+        self.register_buffer("triangular_idx", torch.from_numpy(triangular_idx), persistent=False)
+        self.register_buffer("triangular_weights", torch.from_numpy(weights), persistent=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (..., n_inputs)
@@ -123,12 +138,8 @@ class LogScale(nn.Module):
             cubic_out = self.interpolation_cubic(x, self.fraction_cubic)
             out_chunks.append(cubic_out)
 
-        # Triangular region: max over (input + weights_dB) along input dim.
-        # The naive `shifted = x.unsqueeze(-2) + triangular_weights` materializes a
-        # (..., n_tri, n_inputs) tensor — for spectrogram-shaped inputs at training
-        # batch sizes that's multi-GB. Chunk along the flattened leading dims so the
-        # intermediate tensor stays bounded; amax(dim=-1) is per-row so chunking is
-        # numerically identical to the unchunked path.
+        # Triangular region: max over the same compact per-bin windows as C++.
+        # Chunk along the flattened leading dims so the intermediate stays bounded.
         if self.n_triangular_bins > 0:
             out_chunks.append(self._triangular_amax(x))
 
@@ -140,8 +151,7 @@ class LogScale(nn.Module):
     _TRI_CHUNK_BYTES: int = 128 * 1024 * 1024
 
     def _triangular_amax(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute `(x.unsqueeze(-2) + triangular_weights).max(dim=-1)[0]` chunked
-        along the flattened leading dims so the intermediate stays bounded.
+        """Compute each C++ triangular window chunked along the flattened leading dims.
 
         Uses `.max(dim=-1)[0]` rather than `.amax(dim=-1)` because PyTorch's amax
         backward saves the full pre-reduction tensor (~6 GB at training shapes),
@@ -152,17 +162,17 @@ class LogScale(nn.Module):
         n_inputs = x.shape[-1]
         flat = x.reshape(-1, n_inputs)  # (N, n_inputs)
         N = flat.shape[0]
-        n_tri = self.triangular_weights.shape[0]
-        bytes_per_row = n_tri * n_inputs * x.element_size()
+        n_tri, window_width = self.triangular_weights.shape
+        bytes_per_row = n_tri * window_width * x.element_size()
         chunk = max(1, self._TRI_CHUNK_BYTES // max(1, bytes_per_row))
         if chunk >= N:
-            shifted = flat.unsqueeze(-2) + self.triangular_weights
-            out_flat = shifted.max(dim=-1)[0]
+            gathered = flat[:, self.triangular_idx]
+            out_flat = (gathered + self.triangular_weights).max(dim=-1)[0]
         else:
             outs = []
             for i in range(0, N, chunk):
                 sub = flat[i:i + chunk]
-                shifted = sub.unsqueeze(-2) + self.triangular_weights
-                outs.append(shifted.max(dim=-1)[0])
+                gathered = sub[:, self.triangular_idx]
+                outs.append((gathered + self.triangular_weights).max(dim=-1)[0])
             out_flat = torch.cat(outs, dim=0)
         return out_flat.reshape(*leading, n_tri)
