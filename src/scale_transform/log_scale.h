@@ -23,10 +23,10 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
         const double freqPerBin = scale * static_cast<double>(c.inputEnd) / (c.nInputs - 1); // frequency difference between two adjacent bins multiplied by scale
         Eigen::ArrayXf centerBins = linLogs.unaryExpr([&freqPerBin](double x) { return (std::pow(10, x) - 1.0) / freqPerBin; }).cast<float>();
 
-        // count number of output bins that has width smaller or equal to 1 (corresponds to upsampling)
+        // count number of output bins that is needed to go beyond first two centerBins (requirement for cubic interpolation to be possible)
         // these output bins will be calculated using linear interpolation
         nLinearBins = 0; // number of bins calculated using linear interpolation
-        while ((nLinearBins < c.nOutputs - 1) && ((centerBins(nLinearBins + 1) - centerBins(nLinearBins) <= 1.f) || (centerBins(nLinearBins) < 1.f)))
+        while ((nLinearBins < c.nOutputs - 1) && (centerBins(nLinearBins) < 1.f))
         {
             nLinearBins++;
         }
@@ -59,19 +59,19 @@ class LogScale : public AlgorithmImplementation<ScaleTransformConfiguration, Log
 
             const int iStart = static_cast<int>(std::ceil(cStart)); // iStart is part of the weighting so we use ceil here
             const int iMid = static_cast<int>(std::round(cMid));
-            const int iEnd = static_cast<int>(std::ceil(cEnd));  // iEnd is not part of the weighting so we use ceil here
+            const int iEnd = static_cast<int>(std::ceil(cEnd)); // iEnd is not part of the weighting so we use ceil here
             triangularStart(i) = iStart;
             triangularWeights[i].resize(iEnd - iStart);
             for (int iBin = iStart; iBin < iMid; ++iBin)
             {
                 const float linWeight = 1.0f - (cMid - iBin) / (cMid - cStart);
-                triangularWeights[i](iBin - iStart) = 10.0f * std::log10(linWeight+1e-16f);
+                triangularWeights[i](iBin - iStart) = 10.0f * std::log10(linWeight + 1e-16f);
             }
             triangularWeights[i](iMid - iStart) = 0.0f; // full linear weight = 1.0 -> 0 dB
             for (int iBin = iMid + 1; iBin < iEnd; ++iBin)
             {
                 const float linWeight = 1.0f - (iBin - cMid) / (cEnd - cMid);
-                triangularWeights[i](iBin - iStart) = 10.0f * std::log10(linWeight+1e-16f);
+                triangularWeights[i](iBin - iStart) = 10.0f * std::log10(linWeight + 1e-16f);
             }
         }
     }
