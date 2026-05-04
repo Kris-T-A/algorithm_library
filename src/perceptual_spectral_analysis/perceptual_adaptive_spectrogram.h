@@ -23,7 +23,7 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
                     .outputEnd = c.frequencyMax,
                     .inputEnd = c.sampleRate / 2,
                     .transformType = LogScale::Coefficients::LOGARITHMIC}),
-          movingMaxMin({.filterLength = std::max(1, static_cast<int>(c.nBands / 500)), .nChannels = c.nBands})
+          movingMaxMin({.filterLength = 3, .nChannels = 2 * c.bufferSize + 1})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
         if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
@@ -45,6 +45,7 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
     {
         spectrogram.process(input, spectrogramOut);
         if (C.spectralTilt) { spectrogramOut.colwise() += spectralTiltVector; }
+
         logScale.process(spectrogramOut, output);
         movingMaxMin.process(output, output);
     }
