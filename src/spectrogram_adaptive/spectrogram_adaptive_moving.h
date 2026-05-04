@@ -54,7 +54,7 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
     {
         spectrogramSet.process(input, spectrograms);
 
-        output.col(0) = 10 * spectrograms[0].max(1e-20f).log10(); // convert power to dB;
+        output.col(0) = spectrograms[0];
 
         for (auto iFB = 0; iFB < C.nSpectrograms - 1; iFB++)
         {
@@ -74,16 +74,18 @@ class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdap
             // update current spectrogram
             spectrogramBuffer[iFB].leftCols(shiftCols) = spectrogramBuffer[iFB].rightCols(shiftCols); // copy prevous frames
             movingMaxMin[iFB].process(spectrograms[iFB + 1], spectrograms[iFB + 1]);
-            spectrogramBuffer[iFB].rightCols(newCols) = 10 * spectrograms[iFB + 1].max(1e-20f).log10(); // convert power to dB
+            spectrogramBuffer[iFB].rightCols(newCols) = spectrograms[iFB + 1];
 
             // combine previous and current spectrogram
             output.leftCols(newCols) = output.leftCols(newCols).min(spectrogramBuffer[iFB].leftCols(newCols));
         }
+        output = 10 * output.max(1e-20f).log10(); // convert to dB
     }
 
     void resetVariables() final
     {
-        leftBoundaries.setConstant(1e6f); // sentinel for "no prior frame" in dB: large enough that .min(buffer) always discards it, finite to avoid inf-inf NaN in upscale's vertical interp
+        // sentinel for "no prior frame" in dB: large enough that .min(buffer) always discards it, finite to avoid inf-inf NaN in upscale's vertical interp
+        leftBoundaries.setConstant(1e6f);
         for (auto &spectrogram : spectrogramBuffer)
         {
             spectrogram.setConstant(1e6f); // history sentinel: shifted-in cols at frame 0 must lose the .min(buffer), same reason as leftBoundaries
