@@ -65,18 +65,17 @@ def test_full_alignment_matches_cpp(pal):
     )
 
 
-def test_split_mostly_linear():
-    """Narrow frequency range so almost all bins are linear (nCubic = 0, nTriangular = 1).
+def test_split_mostly_cubic():
+    """Narrow frequency range where all center bins > 1, so no linear bins.
 
-    The C++ while-loop bound is ``nLinearBins < nOutputs - 1`` so n_linear_bins is at
-    most ``n_outputs - 1``; the remaining 1 bin falls into the triangular region.
-    ``output_end = 100 Hz`` with ``n_outputs = 100`` keeps all bin spacings <= 1,
-    giving the maximum possible linear split.
+    With the updated C++ while-loop condition (only ``centerBins(i) < 1``),
+    bins in the 20–100 Hz range all have center > 1 and spacing <= 2, so they
+    fall into the cubic region (up to nOutputs - 2 = 98) with 2 triangular bins.
     """
     module = LogScale(n_inputs=8193, n_outputs=100, output_start=20.0, output_end=100.0, input_end=24000.0)
-    assert module.n_linear_bins == 99
-    assert module.n_cubic_bins == 0
-    assert module.n_triangular_bins == 1
+    assert module.n_linear_bins == 0
+    assert module.n_cubic_bins == 98
+    assert module.n_triangular_bins == 2
 
 
 def test_triangular_region_uses_cpp_window_bounds():

@@ -67,19 +67,14 @@ class PerceptualAdaptiveSpectrogramStreaming(nn.Module):
             output_start=frequency_min, output_end=frequency_max,
             input_end=sample_rate / 2,
         )
-        self.moving_max_min = MovingMaxMinVertical(filter_length=max(1, n_bands // 500))
+        self.moving_max_min = MovingMaxMinVertical(filter_length=3)
 
         # Spectral tilt: always allocated as register_buffer so forward stays branch-free
         # (TorchScript / torch.compile can trace through). Zero when disabled.
         if spectral_tilt:
-            # 3 dB boost per octave. Compute as 10*log10(freq/1000); replace leading -inf with 0
-            # to avoid NaN/inf at DC.
-            # Spec choice: the C++ produces -inf at DC (log10(0)); the torch port substitutes 0.0
-            # so that DC bins receive a 0 dB tilt (no shift) instead of -inf.
+            # 3 dB boost per octave. Matches C++: 10*log10(max(freq/1000, 1e-20)).
             freq = np.linspace(0.0, sample_rate / 2, n_bands_internal, dtype=np.float32)
-            with np.errstate(divide="ignore"):
-                tilt = 10.0 * np.log10(freq / 1000.0)
-            tilt = np.nan_to_num(tilt, neginf=0.0)
+            tilt = 10.0 * np.log10(np.maximum(freq / 1000.0, np.float32(1e-20)))
         else:
             tilt = np.zeros(n_bands_internal, dtype=np.float32)
         self.register_buffer(

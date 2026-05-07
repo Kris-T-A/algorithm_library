@@ -42,12 +42,9 @@ class LogScale(nn.Module):
         freq_per_bin = scale * float(input_end) / (n_inputs - 1)
         center_bins = ((np.power(10.0, lin_logs) - 1.0) / freq_per_bin).astype(np.float32)
 
-        # nLinearBins (mirrors C++ while-loop at log_scale.h:30-33).
+        # nLinearBins (mirrors C++ while-loop at log_scale.h:29-32).
         n_linear_bins = 0
-        while (n_linear_bins < n_outputs - 1) and (
-            (center_bins[n_linear_bins + 1] - center_bins[n_linear_bins] <= 1.0)
-            or (center_bins[n_linear_bins] < 1.0)
-        ):
+        while (n_linear_bins < n_outputs - 1) and (center_bins[n_linear_bins] < 1.0):
             n_linear_bins += 1
 
         output_start_idx = center_bins[:n_linear_bins].astype(np.int64)

@@ -51,11 +51,7 @@ def test_streaming_against_cpp(pal, nonlinearity, n_bands):
 
 
 def test_streaming_with_spectral_tilt(pal):
-    """Verify spectralTilt=True is correctly applied (alignment vs C++).
-
-    The C++ tilt vector includes -inf at DC (log10(0)). The torch port substitutes 0.0 there
-    (documented spec improvement). We mask out non-finite rows of the C++ output before comparing.
-    """
+    """Verify spectralTilt=True is correctly applied (alignment vs C++)."""
     cfg = dict(
         bufferSize=512, nBands=128, sampleRate=48000.0,
         frequencyMin=20.0, frequencyMax=20000.0, spectralTilt=True,

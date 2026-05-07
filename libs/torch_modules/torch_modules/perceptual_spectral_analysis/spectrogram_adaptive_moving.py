@@ -456,10 +456,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
         # current_block tracks the "live" dB output for the current cascade level.
         # It grows from 1 column → 2 → 4 … as we process each level.
 
-        # Level 0: single column, convert to dB.
-        current_block = 10.0 * torch.log10(
-            spectrograms[0].clamp(min=1e-20)
-        )  # (B, n_bands, 1)
+        # Level 0: single column, linear power.
+        current_block = spectrograms[0]  # (B, n_bands, 1)
 
         # Collect new left boundaries; rebuild self.left_boundaries once at the end.
         # Reads of self.left_boundaries[..., iFB:iFB+1] inside the loop only ever
@@ -503,13 +501,11 @@ class SpectrogramAdaptiveMoving(nn.Module):
             moving_output = self.moving_max_min[iFB](
                 moving_input, detach_state=detach_state
             )  # (B, n_bands, new_cols)
-            new_db = 10.0 * torch.log10(moving_output.clamp(min=1e-20))
-            # shape: (B, n_bands, new_cols)
 
             # Shift-register update on spectrogram_buffer[iFB]:
-            # leftCols(shiftCols) = rightCols(shiftCols), then rightCols(newCols) = new_db
+            # leftCols(shiftCols) = rightCols(shiftCols), then rightCols(newCols) = moving_output
             sb = self._get_spectrogram_buffer(iFB)  # (B, n_bands, current_cols)
-            new_sb = torch.cat([sb[..., -shift_cols:], new_db], dim=-1)
+            new_sb = torch.cat([sb[..., -shift_cols:], moving_output], dim=-1)
             # shape: (B, n_bands, current_cols)  [shift_cols + new_cols = current_cols]
             if detach_state:
                 new_sb = new_sb.detach()
@@ -524,6 +520,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
                 new_lb_tensor.detach() if detach_state else new_lb_tensor
             )
 
+        # Convert to dB after all cascade operations (mirrors C++ end-of-processAlgorithm).
+        current_block = 10.0 * torch.log10(current_block.clamp(min=1e-20))
         # Reshape back to leading dims.
         return current_block.reshape(*leading, self.n_bands, 1 << (self.n_spectrograms - 1))
 
@@ -560,8 +558,8 @@ class SpectrogramAdaptiveMoving(nn.Module):
             spectrograms.append(power)  # (B, n_bands, N * 2^iSG)
 
         # Cascade combine.
-        current_block = 10.0 * torch.log10(spectrograms[0].clamp(min=1e-20))
-        # current_block shape: (B, n_bands, N * 1)
+        current_block = spectrograms[0]
+        # current_block shape: (B, n_bands, N * 1)  — linear power
 
         for iFB in range(self.n_spectrograms - 1):
             prev_cols = 1 << iFB
@@ -598,15 +596,15 @@ class SpectrogramAdaptiveMoving(nn.Module):
             # Per-level moving max-min over the full time axis.
             moving_input = spectrograms[iFB + 1]  # (B, n_bands, N * new_cols)
             moving_output = self.moving_max_min_time[iFB](moving_input)
-            new_db_full = 10.0 * torch.log10(moving_output.clamp(min=1e-20))
 
             # Apply the streaming shift-register's shift_cols-frame delay by
             # left-padding with the 1e6 sentinel and re-cropping.
-            new_db_padded = F.pad(new_db_full, (shift_cols, 0), value=1e6)
-            new_db_aligned = new_db_padded[..., : N * new_cols]
+            new_linear_padded = F.pad(moving_output, (shift_cols, 0), value=1e6)
+            new_linear_aligned = new_linear_padded[..., : N * new_cols]
 
-            current_block = torch.minimum(upscaled, new_db_aligned)
+            current_block = torch.minimum(upscaled, new_linear_aligned)
 
+        current_block = 10.0 * torch.log10(current_block.clamp(min=1e-20))
         return current_block.reshape(
             *leading, self.n_bands, N * (1 << (self.n_spectrograms - 1))
         )
