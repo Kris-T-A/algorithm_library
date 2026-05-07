@@ -26,7 +26,10 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
           movingMaxMin({.filterLength = 3, .nChannels = 2 * c.bufferSize + 1})
     {
         spectrogramOut = spectrogram.initDefaultOutput();
-        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
+        if (c.spectralTilt)
+        {
+            spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).max(1e-20f).log10();
+        } // 3dB boost per octave
         else
         {
             spectralTiltVector.resize(0);
@@ -45,7 +48,6 @@ class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualS
     {
         spectrogram.process(input, spectrogramOut);
         if (C.spectralTilt) { spectrogramOut.colwise() += spectralTiltVector; }
-
         logScale.process(spectrogramOut, output);
         movingMaxMin.process(output, output);
     }
