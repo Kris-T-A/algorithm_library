@@ -5,7 +5,7 @@
 //
 //
 // audio: The input audio signal. The input audio signal must have a size equal to bufferSize
-// gain spectrogram: The gain spectrogram is a matrix of size nBands x 8. The gain spectrogram is used to attenuate the input audio signal.
+// gain spectrogram: The gain spectrogram is a matrix of size nBands x 2^(timeOversampling - 1). The gain spectrogram is used to attenuate the input audio signal.
 // nBands: The number of frequency bands in the gain spectrogram. nBands = bufferSize * 2 + 1
 //
 // author: Kristian Timm Andersen
@@ -15,15 +15,16 @@ struct AudioAttenuateConfiguration
     struct Input
     {
         I::Real audio;             // input audio signal. The input audio signal must have a size equal to bufferSize
-        I::Real2D gainSpectrogram; // gain attenuation matrix: nBands x 8, where nBands = (bufferSize * 2 + 1)
+        I::Real2D gainSpectrogram; // gain attenuation matrix: nBands x nFrames, where nBands = (bufferSize * 2 + 1), nFrames = 2^(timeOversampling - 1)
     };
 
     using Output = O::Real;
 
     struct Coefficients
     {
-        int bufferSize = 1024; // bufferSize is equal to bufferSize of the largest filterbank
-        DEFINE_TUNABLE_COEFFICIENTS(bufferSize)
+        int bufferSize = 1024;    // bufferSize is equal to bufferSize of the input (largest filterbank)
+        int timeOversampling = 3; // oversampling factor of gainSpectrogram: nFrames = 2^(timeOversampling - 1)
+        DEFINE_TUNABLE_COEFFICIENTS(bufferSize, timeOversampling)
     };
 
     struct Parameters
@@ -31,12 +32,11 @@ struct AudioAttenuateConfiguration
         DEFINE_NO_TUNABLE_PARAMETERS
     };
 
-    static constexpr int nGains = 8; // number of gains in the gain spectrogram (must be power of 2). The gain spectrogram is a matrix of size nBands x nGains
-
     static std::tuple<Eigen::ArrayXf, Eigen::ArrayXXf> initInput(const Coefficients &c)
     {
-        Eigen::ArrayXf inputAudio = Eigen::ArrayXf::Random(c.bufferSize);                              // audio samples
-        Eigen::ArrayXXf gainSpectrogram = Eigen::ArrayXXf::Random(c.bufferSize * 2 + 1, nGains).abs(); // gain between 0 and 1
+        Eigen::ArrayXf inputAudio = Eigen::ArrayXf::Random(c.bufferSize); // audio samples
+        const int nFrames = std::pow(2, c.timeOversampling - 1);
+        Eigen::ArrayXXf gainSpectrogram = Eigen::ArrayXXf::Random(c.bufferSize * 2 + 1, nFrames).abs(); // gain between 0 and 1
         return std::make_tuple(inputAudio, gainSpectrogram);
     }
 
@@ -44,8 +44,9 @@ struct AudioAttenuateConfiguration
 
     static bool validInput(Input input, const Coefficients &c)
     {
+        const int nFrames = std::pow(2, c.timeOversampling - 1);
         return input.audio.allFinite() && (input.audio.size() == c.bufferSize) && (input.gainSpectrogram.rows() == (c.bufferSize * 2 + 1)) &&
-               (input.gainSpectrogram.cols() == nGains) && isPositivePowerOfTwo(nGains) && (input.gainSpectrogram >= 0.f).all() && (input.gainSpectrogram <= 1.f).all();
+               (input.gainSpectrogram.cols() == nFrames) && (c.timeOversampling > 0) && (input.gainSpectrogram >= 0.f).all() && (input.gainSpectrogram <= 1.f).all();
     }
 
     static bool validOutput(Output output, const Coefficients &c) { return (output.size() == c.bufferSize) && output.allFinite(); }

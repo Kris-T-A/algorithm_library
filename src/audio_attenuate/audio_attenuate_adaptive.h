@@ -12,15 +12,15 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
 {
   public:
     AudioAttenuateAdaptive(const Coefficients &c = Coefficients())
-        : BaseAlgorithm(c), bufferSizeSmall(c.bufferSize / Configuration::nGains),
-          filterbankAnalysis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = nFilterbanks, .nFolds = 1}),
-          decimateGain({.nBands = 2 * c.bufferSize + 1}),
-          filterbankSynthesis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = nFilterbanks, .nFolds = 1}),
-          audioCombineMax({.bufferSize = bufferSizeSmall, .nChannels = nFilterbanks})
+        : BaseAlgorithm(c), nFrames(std::pow(2, c.timeOversampling - 1)), bufferSizeSmall(c.bufferSize / nFrames),
+          filterbankAnalysis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = c.timeOversampling, .nFolds = 1}),
+          decimateGain({.nBands = 2 * c.bufferSize + 1, .timeOversampling = c.timeOversampling}),
+          filterbankSynthesis({.bufferSize = c.bufferSize, .nBands = 2 * c.bufferSize + 1, .nFilterbanks = c.timeOversampling, .nFolds = 1}),
+          audioCombineMax({.bufferSize = bufferSizeSmall, .nChannels = c.timeOversampling})
 
     {
-        delay.resize(nFilterbanks - 1); // one less than the number of filterbanks since the first filterbank does not need a delay
-        for (auto i = 0; i < nFilterbanks - 1; i++)
+        delay.resize(c.timeOversampling - 1); // one less than the number of filterbanks since the first filterbank does not need a delay
+        for (auto i = 0; i < c.timeOversampling - 1; i++)
         {
             CircularBuffer::Coefficients cDelay;
             cDelay.delayLength = 3 * c.bufferSize - static_cast<int>(1.5f / positivePow2(i) * c.bufferSize);
@@ -31,11 +31,12 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         gainMultipleResolution = decimateGain.initDefaultOutput();
         gainOldMultipleResolution = decimateGain.initDefaultOutput();
         outputSet = filterbankSynthesis.initDefaultOutput();
-        delayedOutput = Eigen::ArrayXXf::Zero(bufferSizeSmall, nFilterbanks);
+        delayedOutput = Eigen::ArrayXXf::Zero(bufferSizeSmall, c.timeOversampling);
 
         resetVariables();
     }
 
+    int nFrames;         // number of frames in gainSpectrogram
     int bufferSizeSmall; // smallest buffer size. Initialize first so it's available in the constructor
     FilterbankSetAnalysisWOLA filterbankAnalysis;
     DecimateGain decimateGain;
@@ -50,7 +51,7 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         filterbankAnalysis.process(input.audio, spectrogramMultipleResolution);
         decimateGain.process(input.gainSpectrogram, gainMultipleResolution);
 
-        for (auto iFilterbank = 0; iFilterbank < nFilterbanks; iFilterbank++)
+        for (auto iFilterbank = 0; iFilterbank < C.timeOversampling; iFilterbank++)
         {
             spectrogramMultipleResolution[iFilterbank] *= gainOldMultipleResolution[iFilterbank];
         }
@@ -59,10 +60,10 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
         filterbankSynthesis.process(spectrogramMultipleResolution, outputSet);
 
         // for each small buffer size, delay and choose the signal with maximum power
-        for (auto i = 0; i < Configuration::nGains; i++)
+        for (auto i = 0; i < nFrames; i++)
         {
             delayedOutput.col(0) = outputSet.col(0).segment(i * bufferSizeSmall, bufferSizeSmall);
-            for (auto iDelay = 1; iDelay < nFilterbanks; iDelay++)
+            for (auto iDelay = 1; iDelay < C.timeOversampling; iDelay++)
             {
                 delay[iDelay - 1].process(outputSet.col(iDelay).segment(i * bufferSizeSmall, bufferSizeSmall), delayedOutput.col(iDelay));
             }
@@ -103,9 +104,6 @@ class AudioAttenuateAdaptive : public AlgorithmImplementation<AudioAttenuateConf
     std::vector<Eigen::ArrayXXf> gainOldMultipleResolution;
     Eigen::ArrayXXf outputSet;
     Eigen::ArrayXXf delayedOutput;
-
-    constexpr static int nFilterbanks = numberOfBits(Configuration::nGains); // Number of filterbanks: log2(8) = 4
-    constexpr static int nGains2 = Configuration::nGains / 2;                // 8 / 2 = 4
 
     friend BaseAlgorithm;
 };

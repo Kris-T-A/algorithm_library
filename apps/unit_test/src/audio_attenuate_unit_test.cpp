@@ -34,7 +34,6 @@ TEST(DecimateGain, PrintOutput)
 }
 
 // pass an impulse through the algorithm to check if it comes out unchanged
-// This test is currently not passing!
 TEST(AudioAttenuate, ImpulseTest)
 {
     // initialize algorithm
@@ -43,7 +42,8 @@ TEST(AudioAttenuate, ImpulseTest)
     AudioAttenuate algo(c);
 
     int impulseIndex = c.bufferSize * 3 / 2;
-    int expectedDelay = 3 * c.bufferSize + 3 * c.bufferSize / 8 + impulseIndex; // delay of algorithm is delay of longest filterbank + audio combiner
+    const int gainFrames = positivePow2(c.timeOversampling - 1);
+    int expectedDelay = 3 * c.bufferSize + 3 * c.bufferSize / gainFrames + impulseIndex; // delay of algorithm is delay of longest filterbank + audio combiner
     int nFrames = 10;                                                           // number of input buffer sizes to send through algorithm
     Eigen::ArrayXf input(nFrames * c.bufferSize), output(nFrames * c.bufferSize);
     input.setZero();
