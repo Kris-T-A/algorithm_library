@@ -50,7 +50,7 @@ class SpectrogramAdaptiveSetMin : public AlgorithmImplementation<SpectrogramAdap
         outputWithLeftBoundary.resize(2 * c.bufferSize + 1, nOutputFrames + 1);
         leftBoundaries.resize(2 * c.bufferSize + 1, c.nSpectrograms - 1);
 
-        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).log10(); } // 3dB boost per octave
+        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).max(1e-20f).log10(); } // 3dB boost per octave
         else
         {
             spectralTiltVector.resize(0);
