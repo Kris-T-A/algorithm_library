@@ -57,8 +57,8 @@ class MovingMaxMinHorizontal : public AlgorithmImplementation<MovingMaxMinHorizo
 
     void resetVariables() final
     {
-        maxOut.setConstant(-std::numeric_limits<float>::infinity());
-        minOut.setConstant(std::numeric_limits<float>::infinity());
+        maxOut.setConstant(std::numeric_limits<float>::lowest());
+        minOut.setConstant(std::numeric_limits<float>::max());
         counter = 0;
     }
 
