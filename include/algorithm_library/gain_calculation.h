@@ -35,6 +35,8 @@ struct GainCalculationConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output >= 0).all(); }
 };
 
+// Estimate the a priori signal-to-noise ratio from the supplied a posteriori ratios
+// and convert it into smoothed noise-reduction gains.
 class GainCalculation : public Algorithm<GainCalculationConfiguration>
 {
   public:

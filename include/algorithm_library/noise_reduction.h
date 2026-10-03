@@ -34,6 +34,8 @@ struct NoiseReductionConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Attenuate noise in complex input spectra using either activity-based noise
+// estimation and a priori gains or the configured neural-network model.
 class NoiseReduction : public Algorithm<NoiseReductionConfiguration>
 {
   public:

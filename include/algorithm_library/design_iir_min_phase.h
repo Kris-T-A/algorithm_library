@@ -61,6 +61,8 @@ struct DesignIIRMinPhaseConfiguration
     }
 };
 
+// Fit a minimum-phase IIR filter to a magnitude spectrum and return its gain
+// and cascade of second-order sections.
 class DesignIIRMinPhase : public Algorithm<DesignIIRMinPhaseConfiguration>
 {
   public:

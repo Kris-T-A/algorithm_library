@@ -52,6 +52,8 @@ struct AudioAttenuateConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.size() == c.bufferSize) && output.allFinite(); }
 };
 
+// Apply a gain spectrogram to audio at several time and frequency resolutions,
+// then align and combine the attenuated signals into one output.
 class AudioAttenuate : public Algorithm<AudioAttenuateConfiguration>
 {
   public:

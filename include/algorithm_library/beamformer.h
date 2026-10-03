@@ -46,6 +46,8 @@ struct BeamformerConfiguration
     }
 };
 
+// Combine multichannel complex spectra using MVDR beamforming, producing
+// a signal-of-interest spectrum and a noise-reference spectrum.
 class Beamformer : public Algorithm<BeamformerConfiguration>
 {
   public:

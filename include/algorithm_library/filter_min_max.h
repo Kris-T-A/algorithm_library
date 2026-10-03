@@ -62,6 +62,8 @@ struct FilterMinMaxConfiguration : public BaseFilterMinMaxConfiguration
 struct StreamingMinMaxConfiguration : public BaseFilterMinMaxConfiguration
 {};
 
+// Track the minimum and maximum over a trailing window independently for each channel,
+// retaining history between input blocks.
 class StreamingMinMax : public Algorithm<StreamingMinMaxConfiguration>
 {
   public:
@@ -73,6 +75,8 @@ class StreamingMinMax : public Algorithm<StreamingMinMaxConfiguration>
     void resetInitialValue(I::Real inputOld);
 };
 
+// Compute minimum and maximum envelopes over a centered window in each input block,
+// extending its first and last samples at the boundaries.
 class FilterMinMax : public Algorithm<FilterMinMaxConfiguration>
 {
   public:
@@ -124,6 +128,8 @@ struct StreamingMaxConfiguration : public BaseFilterExtremumConfiguration
 struct StreamingMinConfiguration : public BaseFilterExtremumConfiguration
 {};
 
+// Track the maximum over a trailing window for each channel, retaining history
+// between input blocks.
 class StreamingMax : public Algorithm<StreamingMaxConfiguration>
 {
   public:
@@ -135,6 +141,8 @@ class StreamingMax : public Algorithm<StreamingMaxConfiguration>
     void resetInitialValue(I::Real inputOld);
 };
 
+// Track the minimum over a trailing window for each channel, retaining history
+// between input blocks.
 class StreamingMin : public Algorithm<StreamingMinConfiguration>
 {
   public:
@@ -146,6 +154,8 @@ class StreamingMin : public Algorithm<StreamingMinConfiguration>
     void resetInitialValue(I::Real inputOld);
 };
 
+// Apply a centered maximum filter to each channel, extending the endpoint samples
+// at the boundaries of the input block.
 class FilterMax : public Algorithm<FilterMaxConfiguration>
 {
   public:
@@ -157,6 +167,8 @@ class FilterMax : public Algorithm<FilterMaxConfiguration>
     void resetInitialValue(I::Real inputOld);
 };
 
+// Apply a centered minimum filter to each channel, extending the endpoint samples
+// at the boundaries of the input block.
 class FilterMin : public Algorithm<FilterMinConfiguration>
 {
   public:

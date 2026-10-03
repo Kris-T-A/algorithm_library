@@ -32,6 +32,8 @@ struct MovingMaxMinHorizontalConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nChannels) && (output.cols() > 0) && output.allFinite(); }
 };
 
+// Apply a trailing maximum followed by a trailing minimum along the time columns
+// independently for each row, preserving history between blocks.
 class MovingMaxMinHorizontal : public AlgorithmImplementation<MovingMaxMinHorizontalConfiguration, MovingMaxMinHorizontal>
 {
   public:

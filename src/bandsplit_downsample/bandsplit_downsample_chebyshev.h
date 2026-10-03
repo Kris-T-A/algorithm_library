@@ -56,6 +56,8 @@ class BandsplitDownsampleChebyshev : public AlgorithmImplementation<BandsplitDow
     friend BaseAlgorithm;
 };
 
+// Insert zeros to upsample the low-frequency branch by three, apply a Chebyshev
+// reconstruction filter, and add the matching high-frequency branch.
 class CombineBandsplitDownsampleChebyshev : public AlgorithmImplementation<CombineBandsplitDownsampleConfiguration, CombineBandsplitDownsampleChebyshev>
 {
   public:

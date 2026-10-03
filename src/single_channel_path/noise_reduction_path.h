@@ -5,6 +5,8 @@
 #include "framework/framework.h"
 #include "noise_reduction/noise_reduction_apriori.h"
 
+// Remove DC from one audio channel, apply activity-based a priori noise reduction
+// to its WOLA spectra, and reconstruct the filtered audio with overlap-add.
 class NoiseReductionPath : public AlgorithmImplementation<SingleChannelPathConfiguration, NoiseReductionPath>
 {
   public:

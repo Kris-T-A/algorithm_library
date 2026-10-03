@@ -36,6 +36,8 @@ struct ActivityDetectionConfiguration
     }
 };
 
+// Estimate signal activity probabilities for each frequency band and channel
+// while tracking background noise power.
 class ActivityDetection : public Algorithm<ActivityDetectionConfiguration>
 {
   public:
@@ -75,6 +77,8 @@ struct ActivityDetectionFusedConfiguration
     }
 };
 
+// Combine frequency-band activity and channel power into one signal-activity flag
+// while tracking background noise power.
 class ActivityDetectionFused : public Algorithm<ActivityDetectionFusedConfiguration>
 {
   public:

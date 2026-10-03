@@ -64,6 +64,8 @@ struct DecimateGainConfiguration
     }
 };
 
+// Reduce a gain spectrogram to multiple resolutions by taking minima over
+// frequency/time blocks; keep Nyquist separate to preserve the strongest attenuation.
 class DecimateGain : public AlgorithmImplementation<DecimateGainConfiguration, DecimateGain>
 {
   public:

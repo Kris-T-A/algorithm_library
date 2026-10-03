@@ -50,6 +50,8 @@ struct FFTConfiguration
     };
 };
 
+// Transform real time samples into their nonnegative-frequency complex spectrum;
+// the inverse method reconstructs the real time samples.
 class FFT : public Algorithm<FFTConfiguration>
 {
   public:

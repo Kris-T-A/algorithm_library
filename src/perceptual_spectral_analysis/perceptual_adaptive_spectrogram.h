@@ -7,6 +7,8 @@
 #include "spectrogram_adaptive/spectrogram_adaptive_zeropad.h"
 #include "utilities/fastonebigheader.h"
 
+// Combine several analysis-window resolutions in linear power, convert the result
+// to dB, then apply optional spectral tilt, logarithmic mapping, and frequency smoothing.
 class PerceptualAdaptiveSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualAdaptiveSpectrogram>
 {
   public:

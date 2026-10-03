@@ -37,6 +37,8 @@ struct ScaleTransformConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.cols() > 0) && (output.rows() == c.nOutputs); }
 };
 
+// Resample each input column from a linear grid onto logarithmic or Mel-spaced
+// positions using interpolation and weighted maxima for wider output bands.
 class ScaleTransform : public Algorithm<ScaleTransformConfiguration>
 {
   public:

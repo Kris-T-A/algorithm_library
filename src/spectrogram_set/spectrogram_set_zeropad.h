@@ -56,6 +56,8 @@ struct SpectrogramSetZeropadConfiguration
     }
 };
 
+// Compute powers at progressively shorter analysis windows and hops while
+// zero-padding onto a shared FFT grid; return one frame matrix per resolution.
 class SpectrogramSetZeropad : public AlgorithmImplementation<SpectrogramSetZeropadConfiguration, SpectrogramSetZeropad>
 {
   public:

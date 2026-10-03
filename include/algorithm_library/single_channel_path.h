@@ -27,6 +27,8 @@ struct SingleChannelPathConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && output.allFinite(); }
 };
 
+// Remove DC, analyze a single audio channel into spectral frames, apply
+// noise-reduction gains, and synthesize the filtered time-domain signal.
 class SingleChannelPath : public Algorithm<SingleChannelPathConfiguration>
 {
   public:

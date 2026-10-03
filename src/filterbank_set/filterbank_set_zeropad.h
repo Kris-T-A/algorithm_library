@@ -172,6 +172,8 @@ struct FilterbankSetSynthesisZeropadConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == c.nFilterbanks) && output.allFinite(); }
 };
 
+// Reconstruct one audio column per resolution from spectra on a shared FFT grid,
+// using the matching reduced synthesis windows and overlap-add.
 class FilterbankSetSynthesisZeropad : public AlgorithmImplementation<FilterbankSetSynthesisZeropadConfiguration, FilterbankSetSynthesisZeropad>
 {
   public:

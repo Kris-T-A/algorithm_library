@@ -57,6 +57,8 @@ struct SpectrogramAdaptiveSetConfiguration
     }
 };
 
+// Combine spectrograms from progressively shorter analysis windows and return
+// the cumulative dB result at each resolution on a perceptual frequency grid.
 class SpectrogramAdaptiveSet : public Algorithm<SpectrogramAdaptiveSetConfiguration>
 {
   public:

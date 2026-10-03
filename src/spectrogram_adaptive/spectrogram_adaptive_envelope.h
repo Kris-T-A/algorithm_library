@@ -8,6 +8,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Align and upscale dB spectra from several window lengths, take their minimum,
+// and subtract an interpolated envelope correction derived from a coarser resolution.
 class SpectrogramAdaptiveEnvelope : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveEnvelope>
 {
   public:

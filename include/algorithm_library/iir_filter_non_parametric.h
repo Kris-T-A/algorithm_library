@@ -35,6 +35,8 @@ struct IIRFilterNonParametricConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.cols() == c.nChannels) && (output.rows() > 0) && output.allFinite(); }
 };
 
+// Design an IIR filter from frequency/gain control points and apply it to each
+// input channel while retaining filter state.
 class IIRFilterNonParametric : public Algorithm<IIRFilterNonParametricConfiguration>
 {
   public:

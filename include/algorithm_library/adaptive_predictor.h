@@ -79,6 +79,8 @@ struct AdaptivePredictorConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() > 0); }
 };
 
+// Learn predictable periodic content from a delayed copy of a single-channel signal
+// and output either its prediction or the residual using the selected adaptive estimator.
 class AdaptivePredictor : public Algorithm<AdaptivePredictorConfiguration>
 {
   public:

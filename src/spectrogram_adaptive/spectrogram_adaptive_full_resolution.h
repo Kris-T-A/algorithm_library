@@ -7,6 +7,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Evaluate several window lengths on a shared time/frequency grid, take the minimum
+// dB spectrum, then blend toward the shortest-window spectrum using spectral envelopes.
 class SpectrogramAdaptiveFullResolution : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveFullResolution>
 {
   public:

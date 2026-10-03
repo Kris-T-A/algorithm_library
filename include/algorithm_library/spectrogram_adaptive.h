@@ -45,7 +45,8 @@ struct SpectrogramAdaptiveConfiguration
     }
 };
 
-// Analysis filterbank
+// Combine spectra from several window lengths on a shared time/frequency grid,
+// using the selected adaptive method to produce a dB spectrogram.
 class SpectrogramAdaptive : public Algorithm<SpectrogramAdaptiveConfiguration>
 {
   public:

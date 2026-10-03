@@ -33,6 +33,8 @@ struct MovingMaxMinVerticalConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nChannels) && (output.cols() > 0) && output.allFinite(); }
 };
 
+// Apply a maximum followed by a minimum along the frequency rows of each column,
+// shifting the result and extending boundaries to center the filtering window.
 class MovingMaxMinVertical : public AlgorithmImplementation<MovingMaxMinVerticalConfiguration, MovingMaxMinVertical>
 {
   public:

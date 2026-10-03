@@ -20,6 +20,8 @@ struct TSetup
 };
 
 template <typename Tconfiguration>
+// Expose a configured processing algorithm through an owning implementation pointer,
+// with common processing, setup, validation, and reset operations.
 class Algorithm
 {
   public:

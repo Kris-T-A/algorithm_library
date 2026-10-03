@@ -3,6 +3,8 @@
 #include "framework/framework.h"
 #include "utilities/fastonebigheader.h"
 
+// Estimate per-band signal activity from the ratio of input power to tracked noise
+// and slow noise adaptation while a signal is active.
 class ActivityDetectionNoiseEstimation : public AlgorithmImplementation<ActivityDetectionConfiguration, ActivityDetectionNoiseEstimation>
 {
   public:
@@ -64,6 +66,8 @@ class ActivityDetectionNoiseEstimation : public AlgorithmImplementation<Activity
     friend BaseAlgorithm;
 };
 
+// Reduce per-band activity probabilities and channel-to-noise power ratios
+// to one activity flag while retaining the underlying noise estimate.
 class ActivityDetectionFusedNoiseEstimation : public AlgorithmImplementation<ActivityDetectionFusedConfiguration, ActivityDetectionFusedNoiseEstimation>
 {
   public:

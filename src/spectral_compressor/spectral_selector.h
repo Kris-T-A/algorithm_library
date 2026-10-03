@@ -37,6 +37,8 @@ struct SpectralSelectorConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == getNOutputChannels(c)) && output.allFinite(); }
 };
 
+// Choose the lowest-power complex spectrum value among corresponding stream
+// channels in each frequency band, then synthesize the selected output channels.
 class SpectralSelector : public AlgorithmImplementation<SpectralSelectorConfiguration, SpectralSelector>
 {
   public:

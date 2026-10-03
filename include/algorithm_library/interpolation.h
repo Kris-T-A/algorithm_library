@@ -46,6 +46,8 @@ struct InterpolationSampleConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return std::isfinite(output); }
 };
 
+// Estimate one value between the two middle samples of a four-sample neighborhood
+// using cubic interpolation.
 class InterpolationSample : public Algorithm<InterpolationSampleConfiguration>
 {
   public:
@@ -98,6 +100,7 @@ struct InterpolationConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return output.allFinite(); }
 };
 
+// Evaluate cubic interpolation at arbitrary fractional indices of an input array.
 class Interpolation : public Algorithm<InterpolationConfiguration>
 {
   public:
@@ -132,6 +135,7 @@ struct InterpolationConstantConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return output.allFinite(); }
 };
 
+// Interpolate a sequence using a fixed fractional delay and precomputed cubic weights.
 class InterpolationConstant : public Algorithm<InterpolationConstantConfiguration>
 {
   public:

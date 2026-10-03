@@ -36,6 +36,8 @@ struct Normal3dConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == 3 * c.nValuesX) && (output.cols() > 0) && output.allFinite(); }
 };
 
+// Estimate normalized surface normals from a streamed height grid and store
+// the three vector components interleaved along the output rows.
 class Normal3d : public Algorithm<Normal3dConfiguration>
 {
   public:

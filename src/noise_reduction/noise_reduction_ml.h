@@ -114,6 +114,8 @@ class ONNXModel
     std::vector<Ort::Value> outputTensors;
 };
 
+// Feed spectral power, phase, and persistent recurrent state into an ONNX model
+// and apply its predicted gains to the complex input spectrum.
 class NoiseReductionML : public AlgorithmImplementation<NoiseReductionConfiguration, NoiseReductionML>
 {
   public:

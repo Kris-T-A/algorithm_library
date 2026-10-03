@@ -34,6 +34,8 @@ class InterpolationCubicSample : public AlgorithmImplementation<InterpolationSam
 
 // ----------------------------- Cubic interpolation of array ------------------------------------------------------
 
+// Evaluate four-point cubic Hermite interpolation at each requested fractional
+// index of an input sample array.
 class InterpolationCubic : public AlgorithmImplementation<InterpolationConfiguration, InterpolationCubic>
 {
   public:

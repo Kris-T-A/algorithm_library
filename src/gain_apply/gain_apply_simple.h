@@ -2,6 +2,8 @@
 #include "algorithm_library/gain_apply.h"
 #include "framework/framework.h"
 
+// Smooth the product of global and per-channel gains for each time sample
+// and multiply the input audio by the evolving gains.
 class GainApplySimple : public AlgorithmImplementation<GainApplyConfiguration, GainApplySimple>
 {
   public:

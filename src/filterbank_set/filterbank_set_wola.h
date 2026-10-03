@@ -4,6 +4,8 @@
 #include "framework/framework.h"
 #include "utilities/fastonebigheader.h"
 
+// Analyze one audio buffer at several WOLA resolutions, halving the hop and FFT
+// size at each level and returning progressively more spectral frames.
 class FilterbankSetAnalysisWOLA : public AlgorithmImplementation<FilterbankSetAnalysisConfiguration, FilterbankSetAnalysisWOLA>
 {
   public:
@@ -132,6 +134,8 @@ class FilterbankSetAnalysisWOLA : public AlgorithmImplementation<FilterbankSetAn
     friend BaseAlgorithm;
 };
 
+// Synthesize each resolution of a WOLA filterbank set into its own audio column,
+// processing the shorter-hop levels in successive subframes.
 class FilterbankSetSynthesisWOLA : public AlgorithmImplementation<FilterbankSetSynthesisConfiguration, FilterbankSetSynthesisWOLA>
 {
   public:

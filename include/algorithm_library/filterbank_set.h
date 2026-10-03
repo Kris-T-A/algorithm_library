@@ -58,7 +58,8 @@ struct FilterbankSetAnalysisConfiguration
     }
 };
 
-// Analysis filterbank
+// Analyze single-channel audio at multiple resolutions, halving the hop and FFT
+// size at each level and returning a vector of complex frame matrices.
 class FilterbankSetAnalysis : public Algorithm<FilterbankSetAnalysisConfiguration>
 {
   public:
@@ -120,7 +121,8 @@ struct FilterbankSetSynthesisConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == c.nFilterbanks) && output.allFinite(); }
 };
 
-// Synthesis filterbank
+// Reconstruct one time-domain audio column per filterbank resolution from its
+// complex spectral frames, using matching windows and overlap-add.
 class FilterbankSetSynthesis : public Algorithm<FilterbankSetSynthesisConfiguration>
 {
   public:

@@ -54,6 +54,7 @@ struct ConvertRGBAConfiguration
     }
 };
 
+// Map normalized scalar values to RGBA pixels using the configured color map.
 class ConvertRGBA : public Algorithm<ConvertRGBAConfiguration>
 {
   public:

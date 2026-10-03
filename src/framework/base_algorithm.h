@@ -172,6 +172,8 @@ struct AsynchronousBufferImplementation : public BufferImplementation<Talgo, Tco
 };
 
 template <typename Tconfiguration, typename Talgo>
+// Provide configuration, state reset, validation, and member-algorithm management
+// for implementations whose processing is dispatched through the derived type.
 class AlgorithmImplementation
 {
   public:

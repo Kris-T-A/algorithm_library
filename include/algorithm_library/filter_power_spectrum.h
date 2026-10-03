@@ -49,6 +49,8 @@ struct FilterPowerSpectrumConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output >= 0).all(); }
 };
 
+// Evaluate the power response of a cascade of second-order IIR sections
+// on the configured frequency grid.
 class FilterPowerSpectrum : public Algorithm<FilterPowerSpectrumConfiguration>
 {
   public:

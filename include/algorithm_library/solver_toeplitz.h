@@ -57,6 +57,8 @@ struct SolverToeplitzConfiguration
     }
 };
 
+// Solve a complex Toeplitz system for multiple right-hand sides using
+// the matrix first row rather than storing the full matrix.
 class SolverToeplitz : public Algorithm<SolverToeplitzConfiguration>
 {
   public:

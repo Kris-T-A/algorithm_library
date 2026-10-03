@@ -55,6 +55,8 @@ struct BandsplitDownsampleConfiguration
     }
 };
 
+// Split audio into a low-frequency signal downsampled by three and a delayed
+// high-frequency signal retained at the original sample rate.
 class BandsplitDownsample : public Algorithm<BandsplitDownsampleConfiguration>
 {
   public:
@@ -107,6 +109,8 @@ struct CombineBandsplitDownsampleConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == 3 * c.nSamples) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Upsample and low-pass filter a low-frequency signal by three, then add its
+// matching high-frequency signal to reconstruct audio at the original sample rate.
 class CombineBandsplitDownsample : public Algorithm<CombineBandsplitDownsampleConfiguration>
 {
   public:

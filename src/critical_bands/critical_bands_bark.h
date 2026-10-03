@@ -49,6 +49,7 @@ class CriticalBandsBark
 
 // --------------------------------------------------- CriticalBandsBarkSum ----------------------------------------------------------------
 
+// Sum FFT-bin powers within each Bark critical band independently for every channel.
 class CriticalBandsBarkSum : public CriticalBandsBark, public AlgorithmImplementation<CriticalBandsSumConfiguration, CriticalBandsBarkSum>
 {
   public:
@@ -75,6 +76,7 @@ class CriticalBandsBarkSum : public CriticalBandsBark, public AlgorithmImplement
 
 // --------------------------------------------------- CriticalBandsBarkMax ----------------------------------------------------------------
 
+// Take the maximum FFT-bin power within each Bark critical band for every channel.
 class CriticalBandsBarkMax : public CriticalBandsBark, public AlgorithmImplementation<CriticalBandsMaxConfiguration, CriticalBandsBarkMax>
 {
   public:
@@ -101,6 +103,7 @@ class CriticalBandsBarkMax : public CriticalBandsBark, public AlgorithmImplement
 
 // --------------------------------------------------- CriticalBandsBarkMean ----------------------------------------------------------------
 
+// Average FFT-bin powers within each Bark critical band independently for every channel.
 class CriticalBandsBarkMean : public CriticalBandsBark, public AlgorithmImplementation<CriticalBandsMeanConfiguration, CriticalBandsBarkMean>
 {
   public:

@@ -35,6 +35,8 @@ struct SpectrogramConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && output.allFinite() && (output >= 0).all(); }
 };
 
+// Compute frequency-band powers from single-channel audio using the selected
+// windowed filterbank or nonlinear spectral analysis method.
 class Spectrogram : public Algorithm<SpectrogramConfiguration>
 {
   public:

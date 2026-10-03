@@ -82,6 +82,8 @@ class FilterbankAnalysisSingleChannel : public AlgorithmImplementation<Filterban
 
 // --------------------------------------------------- FilterbankSynthesis ----------------------------------------------------------------
 
+// Synthesize successive complex frames into a single audio stream using
+// inverse FFTs and windowed overlap-add while retaining overlap between calls.
 class FilterbankSynthesisSingleChannel : public AlgorithmImplementation<FilterbankSynthesisConfiguration, FilterbankSynthesisSingleChannel>
 {
   public:

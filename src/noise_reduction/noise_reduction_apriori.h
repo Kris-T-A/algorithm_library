@@ -4,6 +4,8 @@
 #include "gain_calculation/gain_calculation_apriori.h"
 #include "noise_estimation/noise_estimation_activity_detection.h"
 
+// Estimate noise power using signal activity, derive a priori gains from the
+// input-to-noise power ratio, and multiply them into the complex spectrum.
 class NoiseReductionAPriori : public AlgorithmImplementation<NoiseReductionConfiguration, NoiseReductionAPriori>
 {
   public:

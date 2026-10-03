@@ -31,6 +31,8 @@ struct IIRFilterConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.cols() == c.nChannels) && (output.rows() > 0) && output.allFinite(); }
 };
 
+// Filter each input channel through a configured cascade of second-order IIR sections,
+// retaining filter state between blocks.
 class IIRFilter : public Algorithm<IIRFilterConfiguration>
 {
   public:

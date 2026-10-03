@@ -30,6 +30,7 @@ struct DelayConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() > 0) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Delay each input channel by the configured number of samples using a circular buffer.
 class Delay : public Algorithm<DelayConfiguration>
 {
   public:

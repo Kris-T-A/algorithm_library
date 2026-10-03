@@ -9,6 +9,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Align spectra from successively shorter windows, smooth their time columns with
+// maximum/minimum filters, and combine interpolated linear powers before converting to dB.
 class SpectrogramAdaptiveMoving : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveMoving>
 {
   public:

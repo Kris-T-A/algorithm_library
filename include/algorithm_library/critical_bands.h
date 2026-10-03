@@ -48,6 +48,7 @@ struct CriticalBandsMeanConfiguration : public CriticalBandsConfiguration
 struct CriticalBandsMaxConfiguration : public CriticalBandsConfiguration
 {};
 
+// Sum frequency-bin powers within each critical band for every channel.
 class CriticalBandsSum : public Algorithm<CriticalBandsSumConfiguration>
 {
   public:
@@ -57,6 +58,7 @@ class CriticalBandsSum : public Algorithm<CriticalBandsSumConfiguration>
     void inverse(I::Real2D xPower, O::Real2D yPower);
 };
 
+// Average frequency-bin powers within each critical band for every channel.
 class CriticalBandsMean : public Algorithm<CriticalBandsMeanConfiguration>
 {
   public:
@@ -66,6 +68,7 @@ class CriticalBandsMean : public Algorithm<CriticalBandsMeanConfiguration>
     void inverse(I::Real2D xPower, O::Real2D yPower);
 };
 
+// Select the largest frequency-bin power within each critical band for every channel.
 class CriticalBandsMax : public Algorithm<CriticalBandsMaxConfiguration>
 {
   public:

@@ -19,6 +19,8 @@ float getDelaySamples(I::Real window);
 
 // --------------------------------------------------- FilterbankAnalysis ----------------------------------------------------------------
 
+// Window buffered multichannel audio, fold longer windows into the FFT length,
+// and transform each channel into a complex frequency spectrum.
 class FilterbankAnalysisWOLA : public AlgorithmImplementation<FilterbankAnalysisConfiguration, FilterbankAnalysisWOLA>
 {
   public:
@@ -93,6 +95,8 @@ class FilterbankAnalysisWOLA : public AlgorithmImplementation<FilterbankAnalysis
 
 // --------------------------------------------------- FilterbankSynthesis ----------------------------------------------------------------
 
+// Invert each channel spectrum, repeat it across window folds, apply the synthesis
+// window, and overlap-add into successive time-domain output blocks.
 class FilterbankSynthesisWOLA : public AlgorithmImplementation<FilterbankSynthesisConfiguration, FilterbankSynthesisWOLA>
 {
   public:

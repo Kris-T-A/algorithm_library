@@ -59,7 +59,8 @@ struct SpectrogramSetConfiguration
     }
 };
 
-// Analysis filterbank
+// Analyze one audio buffer with progressively shorter windows and hops,
+// returning a separate power-spectrogram matrix for each resolution.
 class SpectrogramSet : public Algorithm<SpectrogramSetConfiguration>
 {
   public:

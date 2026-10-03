@@ -44,6 +44,8 @@ struct SpectrogramMinMaxConfiguration
     }
 };
 
+// Analyze audio with one symmetric and two asymmetric windows and return
+// the minimum and maximum spectral power across the three windows in each band.
 class SpectrogramMinMax : public AlgorithmImplementation<SpectrogramMinMaxConfiguration, SpectrogramMinMax>
 {
   public:

@@ -14,6 +14,8 @@
 
 // ----------------------------- Cubic interpolation of one sample -----------------------------------------
 
+// Compute surface-normal components from neighboring height differences,
+// normalize each vector, and stream the result with one column of delay.
 class Normal3dDiff : public AlgorithmImplementation<Normal3dConfiguration, Normal3dDiff>
 {
   public:

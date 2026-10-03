@@ -6,6 +6,8 @@
 #include "filterbank/filterbank_wola.h"
 #include "framework/framework.h"
 
+// Remove multichannel DC, compute WOLA spectra, detect signal activity,
+// then apply MVDR beamforming and synthesize the single-channel result.
 class BeamformerPath : public AlgorithmImplementation<PreprocessingPathConfiguration, BeamformerPath>
 {
     int nBands; // It's important nBands is declared here before member algorithms since placement order determines the initialization order in constructor initializer list

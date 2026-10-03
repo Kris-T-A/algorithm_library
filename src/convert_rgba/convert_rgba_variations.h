@@ -66,6 +66,7 @@ class ConvertRGBAOcean : public AlgorithmImplementation<ConvertRGBAConfiguration
     friend BaseAlgorithm;
 };
 
+// Convert normalized scalar values to RGBA pixels using the Parula color map.
 class ConvertRGBAParula : public AlgorithmImplementation<ConvertRGBAConfiguration, ConvertRGBAParula>
 {
   public:
@@ -126,6 +127,7 @@ class ConvertRGBAParula : public AlgorithmImplementation<ConvertRGBAConfiguratio
     friend BaseAlgorithm;
 };
 
+// Convert normalized scalar values to RGBA pixels using the Viridis color map.
 class ConvertRGBAViridis : public AlgorithmImplementation<ConvertRGBAConfiguration, ConvertRGBAViridis>
 {
   public:
@@ -179,6 +181,7 @@ class ConvertRGBAViridis : public AlgorithmImplementation<ConvertRGBAConfigurati
     friend BaseAlgorithm;
 };
 
+// Convert normalized scalar values to RGBA pixels using the Plasma color map.
 class ConvertRGBAPlasma : public AlgorithmImplementation<ConvertRGBAConfiguration, ConvertRGBAPlasma>
 {
   public:
@@ -232,6 +235,7 @@ class ConvertRGBAPlasma : public AlgorithmImplementation<ConvertRGBAConfiguratio
     friend BaseAlgorithm;
 };
 
+// Convert normalized scalar values to RGBA pixels using the Magma color map.
 class ConvertRGBAMagma : public AlgorithmImplementation<ConvertRGBAConfiguration, ConvertRGBAMagma>
 {
   public:

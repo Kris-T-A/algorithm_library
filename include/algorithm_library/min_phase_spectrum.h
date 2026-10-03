@@ -31,6 +31,8 @@ struct MinPhaseSpectrumConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output.cols() > 0) && (output.allFinite()); }
 };
 
+// Construct a complex minimum-phase spectrum from a supplied magnitude spectrum
+// using a cepstral representation.
 class MinPhaseSpectrum : public Algorithm<MinPhaseSpectrumConfiguration>
 {
   public:

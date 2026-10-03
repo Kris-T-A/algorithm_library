@@ -5,6 +5,8 @@
 #include "spectrogram/spectrogram_nonlinear.h"
 #include "utilities/fastonebigheader.h"
 
+// Analyze successive short audio frames with asymmetric spectral windows,
+// convert their powers to dB, and map optional tilted levels onto a logarithmic grid.
 class PerceptualNonlinearSpectrogram : public AlgorithmImplementation<PerceptualSpectralAnalysisConfiguration, PerceptualNonlinearSpectrogram>
 {
   public:

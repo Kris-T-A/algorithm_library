@@ -31,6 +31,8 @@ struct NoiseEstimationConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output >= 0.f).all(); }
 };
 
+// Track background noise power in each frequency band, reducing adaptation
+// when the activity detector indicates a signal is present.
 class NoiseEstimation : public Algorithm<NoiseEstimationConfiguration>
 {
   public:
@@ -77,6 +79,8 @@ struct NoiseEstimationActivityConfiguration
     }
 };
 
+// Estimate background noise power and return the signal-activity probability
+// for each frequency band and channel.
 class NoiseEstimationActivity : public Algorithm<NoiseEstimationActivityConfiguration>
 {
   public:
@@ -122,6 +126,8 @@ struct NoiseEstimationActivityFusedConfiguration
     }
 };
 
+// Estimate background noise power and combine activity across bands and channels
+// into a single signal-present flag.
 class NoiseEstimationActivityFused : public Algorithm<NoiseEstimationActivityFusedConfiguration>
 {
   public:

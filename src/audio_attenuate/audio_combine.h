@@ -40,6 +40,8 @@ struct AudioCombineConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return output.allFinite() && (output.size() == c.bufferSize); }
 };
 
+// Analyze audio channels with a WOLA filterbank, select the complex value
+// with greatest power in each band, and synthesize one combined channel.
 class AudioCombineMax : public AlgorithmImplementation<AudioCombineConfiguration, AudioCombineMax>
 {
   public:
@@ -90,6 +92,8 @@ class AudioCombineMax : public AlgorithmImplementation<AudioCombineConfiguration
     friend BaseAlgorithm;
 };
 
+// Analyze audio channels with a WOLA filterbank, select the complex value
+// with least power in each band, and synthesize one combined channel.
 class AudioCombineMin : public AlgorithmImplementation<AudioCombineConfiguration, AudioCombineMin>
 {
   public:

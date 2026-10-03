@@ -71,7 +71,8 @@ struct FilterbankAnalysisConfiguration : public FilterbankConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return ((output.rows() == c.nBands) && (output.cols() == c.nChannels) && (output.allFinite())); }
 };
 
-// Analysis filterbank
+// Analyze buffered audio into complex frequency frames with a windowed FFT,
+// retaining overlap between successive input blocks.
 class FilterbankAnalysis : public Algorithm<FilterbankAnalysisConfiguration>
 {
   public:
@@ -100,6 +101,8 @@ struct FilterbankSynthesisConfiguration : public FilterbankConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Reconstruct time-domain audio from complex spectral frames using inverse FFTs
+// and windowed overlap-add.
 class FilterbankSynthesis : public Algorithm<FilterbankSynthesisConfiguration>
 {
   public:

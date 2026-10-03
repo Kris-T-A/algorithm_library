@@ -49,6 +49,8 @@ struct PerceptualSpectralAnalysisConfiguration
     }
 };
 
+// Analyze single-channel audio using adaptive or nonlinear spectra and map
+// the resulting dB levels onto logarithmically spaced perceptual frequency bands.
 class PerceptualSpectralAnalysis : public Algorithm<PerceptualSpectralAnalysisConfiguration>
 {
   public:

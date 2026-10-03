@@ -4,6 +4,8 @@
 #include "framework/framework.h"
 #include "gain_calculation/gain_calculation_apriori.h"
 
+// Run MVDR beamforming, estimate the output signal-to-noise ratio from its
+// signal and noise spectra, and apply smoothed a priori noise-reduction gains.
 class BeamformerGainReduction : public AlgorithmImplementation<MultiChannelNoiseReductionConfiguration, BeamformerGainReduction>
 {
   public:

@@ -21,6 +21,8 @@ struct PreprocessingPathCoefficientsParameters
 
 using PreprocessingPathConfiguration = ConfigurationBuffer<PreprocessingPathCoefficientsParameters>;
 
+// Remove DC from multichannel audio, detect signal activity, and beamform
+// in the frequency domain before synthesizing a single output channel.
 class PreprocessingPath : public AlgorithmBuffer<PreprocessingPathConfiguration>
 {
   public:

@@ -39,6 +39,8 @@ struct SpectralCompressorConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Compress audio dynamics in separate frequency bands using spectral gains
+// with configurable threshold, ratio, and gain smoothing.
 class SpectralCompressor : public Algorithm<SpectralCompressorConfiguration>
 {
   public:

@@ -36,6 +36,8 @@ struct MultiChannelNoiseReductionConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.nBands) && output.allFinite(); }
 };
 
+// Beamform multichannel spectra and apply noise-reduction gains derived from
+// the beamformed signal and noise-reference powers.
 class MultiChannelNoiseReduction : public Algorithm<MultiChannelNoiseReductionConfiguration>
 {
   public:

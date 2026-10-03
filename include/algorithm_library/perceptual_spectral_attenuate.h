@@ -58,6 +58,8 @@ struct PerceptualSpectralAttenuateConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() == c.bufferSize) && output.allFinite(); }
 };
 
+// Expand perceptual-band amplitude gains to FFT bins, attenuate audio at
+// several resolutions, then align and combine the reconstructed signals.
 class PerceptualSpectralAttenuate : public Algorithm<PerceptualSpectralAttenuateConfiguration>
 {
   public:

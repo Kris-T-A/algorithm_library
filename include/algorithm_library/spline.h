@@ -65,6 +65,8 @@ struct SplineConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() > 0) && (output.cols() > 0) && output.allFinite(); }
 };
 
+// Interpolate ordered x/y control points with cubic splines evaluated
+// at the requested x positions.
 class Spline : public Algorithm<SplineConfiguration>
 {
   public:

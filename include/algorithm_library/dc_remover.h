@@ -38,6 +38,8 @@ struct DCRemoverConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() > 0) && (output.cols() == c.nChannels); }
 };
 
+// Remove DC and very low-frequency drift with a first-order high-pass filter
+// whose state is maintained independently for each channel.
 class DCRemover : public Algorithm<DCRemoverConfiguration>
 {
   public:

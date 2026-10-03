@@ -9,6 +9,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Combine aligned, time-interpolated dB spectra from zero-padded window resolutions
+// and blend toward the shortest-window spectrum using per-frame envelope weights.
 class SpectrogramAdaptiveZeropad : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveZeropad>
 {
   public:

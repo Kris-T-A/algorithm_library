@@ -36,6 +36,8 @@ struct GainApplyConfiguration
     static bool validOutput(Output output, const Coefficients &c) { return (output.rows() > 0) && (output.cols() == c.nChannels) && output.allFinite(); }
 };
 
+// Apply a global gain and per-channel gains to audio, smoothing gain changes
+// with the configured time constant.
 class GainApply : public Algorithm<GainApplyConfiguration>
 {
   public:

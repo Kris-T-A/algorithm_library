@@ -170,6 +170,8 @@ class StreamingMinMaxLemire : public AlgorithmImplementation<StreamingMinMaxConf
     friend BaseAlgorithm;
 };
 
+// Use the streaming Lemire extrema algorithm with shifted output and repeated
+// endpoint samples to compute centered minimum and maximum envelopes.
 class FilterMinMaxLemire : public AlgorithmImplementation<FilterMinMaxConfiguration, FilterMinMaxLemire>
 {
   public:
@@ -209,6 +211,8 @@ class FilterMinMaxLemire : public AlgorithmImplementation<FilterMinMaxConfigurat
     friend BaseAlgorithm;
 };
 
+// Track trailing-window maxima using a monotonic queue of sample indices
+// and values, keeping queue state between input blocks.
 class StreamingMaxLemire : public AlgorithmImplementation<StreamingMaxConfiguration, StreamingMaxLemire>
 {
   public:
@@ -315,6 +319,8 @@ class StreamingMaxLemire : public AlgorithmImplementation<StreamingMaxConfigurat
     friend BaseAlgorithm;
 };
 
+// Track trailing-window minima using a monotonic queue of sample indices
+// and values, keeping queue state between input blocks.
 class StreamingMinLemire : public AlgorithmImplementation<StreamingMinConfiguration, StreamingMinLemire>
 {
   public:
@@ -422,6 +428,8 @@ class StreamingMinLemire : public AlgorithmImplementation<StreamingMinConfigurat
     friend BaseAlgorithm;
 };
 
+// Wrap the streaming maximum filter to produce a centered maximum envelope
+// for each block, repeating endpoint values at its boundaries.
 class FilterMaxLemire : public AlgorithmImplementation<FilterMaxConfiguration, FilterMaxLemire>
 {
   public:
@@ -461,6 +469,8 @@ class FilterMaxLemire : public AlgorithmImplementation<FilterMaxConfiguration, F
     friend BaseAlgorithm;
 };
 
+// Wrap the streaming minimum filter to produce a centered minimum envelope
+// for each block, repeating endpoint values at its boundaries.
 class FilterMinLemire : public AlgorithmImplementation<FilterMinConfiguration, FilterMinLemire>
 {
   public:

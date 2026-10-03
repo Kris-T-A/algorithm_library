@@ -71,6 +71,8 @@ struct DesignIIRNonParametricConfiguration
     }
 };
 
+// Interpolate frequency/gain control points and design a minimum-phase IIR filter
+// represented by a gain and second-order sections.
 class DesignIIRNonParametric : public Algorithm<DesignIIRNonParametricConfiguration>
 {
   public:

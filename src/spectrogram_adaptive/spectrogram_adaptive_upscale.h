@@ -9,6 +9,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Align and upscale dB spectra from several resolutions, take their minimum,
+// and use an upscaled envelope weight to blend toward the shortest-window spectrum.
 class SpectrogramAdaptiveUpscale : public AlgorithmImplementation<SpectrogramAdaptiveConfiguration, SpectrogramAdaptiveUpscale>
 {
   public:

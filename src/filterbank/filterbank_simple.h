@@ -72,6 +72,8 @@ class FilterbankAnalysisSimple : public AlgorithmImplementation<FilterbankAnalys
 
 // --------------------------------------------------- FilterbankSynthesis ----------------------------------------------------------------
 
+// Reconstruct a single channel using inverse FFTs, a synthesis window, and
+// overlap-add, without folding or multichannel processing.
 class FilterbankSynthesisSimple : public AlgorithmImplementation<FilterbankSynthesisConfiguration, FilterbankSynthesisSimple>
 {
   public:

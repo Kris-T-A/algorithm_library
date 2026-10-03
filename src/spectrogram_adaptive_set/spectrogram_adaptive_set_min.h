@@ -11,6 +11,8 @@
 // Adaptive Spectrogram
 //
 // author: Kristian Timm Andersen
+// Build a cumulative minimum of time-aligned, interpolated dB spectra at successive
+// window resolutions, returning each stage after perceptual mapping and frequency smoothing.
 class SpectrogramAdaptiveSetMin : public AlgorithmImplementation<SpectrogramAdaptiveSetConfiguration, SpectrogramAdaptiveSetMin>
 {
   public:
@@ -50,7 +52,10 @@ class SpectrogramAdaptiveSetMin : public AlgorithmImplementation<SpectrogramAdap
         outputWithLeftBoundary.resize(2 * c.bufferSize + 1, nOutputFrames + 1);
         leftBoundaries.resize(2 * c.bufferSize + 1, c.nSpectrograms - 1);
 
-        if (c.spectralTilt) { spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).max(1e-20f).log10(); } // 3dB boost per octave
+        if (c.spectralTilt)
+        {
+            spectralTiltVector = 10.f * (Eigen::ArrayXf::LinSpaced(2 * c.bufferSize + 1, 0.f, c.sampleRate / 2) / 1000.f).max(1e-20f).log10();
+        } // 3dB boost per octave
         else
         {
             spectralTiltVector.resize(0);
@@ -107,7 +112,8 @@ class SpectrogramAdaptiveSetMin : public AlgorithmImplementation<SpectrogramAdap
 
     void resetVariables() final
     {
-        leftBoundaries.setConstant(1e6f); // sentinel for "no prior frame" in dB: large enough that .min(buffer) always discards it, finite to avoid inf-inf NaN in upscale's vertical interp
+        leftBoundaries.setConstant(
+            1e6f); // sentinel for "no prior frame" in dB: large enough that .min(buffer) always discards it, finite to avoid inf-inf NaN in upscale's vertical interp
         for (auto &spectrogram : spectrogramBuffer)
         {
             spectrogram.setConstant(1e6f); // history sentinel: shifted-in cols at frame 0 must lose the .min(buffer), same reason as leftBoundaries
